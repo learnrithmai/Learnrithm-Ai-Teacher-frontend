@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { StreakCard } from "@/components/streak-card";
 
 export default function Dashboard() {
   return (
@@ -43,12 +44,6 @@ export default function Dashboard() {
                   <Button variant="ghost" className="w-full justify-start gap-2">
                     <Compass className="h-5 w-5" /> Profile
                   </Button>
-                  {/* <Button variant="ghost" className="w-full justify-start gap-2">
-                    <Info className="h-5 w-5" /> About us
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start gap-2">
-                    <Settings className="h-5 w-5" /> Settings
-                  </Button> */}
                 </nav>
               </>
             </SheetContent>
@@ -62,7 +57,6 @@ export default function Dashboard() {
           <Layout className="h-6 w-6 text-blue-600" />
           <span className="font-semibold text-xl">Learnrithm</span>
         </div>
-        
         <nav className="space-y-2">
           <Button variant="ghost" className="w-full justify-start gap-2">
             <Home className="h-5 w-5" /> Home
@@ -73,12 +67,6 @@ export default function Dashboard() {
           <Button variant="ghost" className="w-full justify-start gap-2">
             <Compass className="h-5 w-5" /> Profile
           </Button>
-          {/* <Button variant="ghost" className="w-full justify-start gap-2">
-            <Info className="h-5 w-5" /> About us
-          </Button>
-          <Button variant="ghost" className="w-full justify-start gap-2">
-            <Settings className="h-5 w-5" /> Settings
-          </Button> */}
         </nav>
       </aside>
 
@@ -139,12 +127,12 @@ export default function Dashboard() {
                     <div className="text-sm text-muted-foreground">Courses</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-semibold">19.2k</div>
-                    <div className="text-sm text-muted-foreground">Followers</div>
+                    <div className="font-semibold text-blue-600">19.2k</div>
+                    <div className="text-sm text-muted-foreground">Completed Courses</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-semibold text-blue-600">Live</div>
-                    <div className="text-sm text-muted-foreground">Status</div>
+                    <div className="font-semibold text-red-600">1000</div>
+                    <div className="text-sm text-muted-foreground">Uncompleted Courses</div>
                   </div>
                 </div>
               </div>
@@ -174,19 +162,13 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          {/* Monthly Insight */}
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4">Monthly Insight</h3>
-            <div className="h-48 flex items-center justify-center text-muted-foreground">
-              [Graph Placeholder]
-            </div>
-            <div className="mt-4 p-4 bg-secondary rounded-lg">
-              <h4 className="font-medium mb-2">Suggestion: AI Chatbot</h4>
-              <p className="text-sm text-muted-foreground">
-                Use our AI chatbot to get instant help on any of your projects or if you need feedback on a course you created
-              </p>
-            </div>
-          </Card>
+          {/* Replaced Monthly Insight with StreakCard */}
+          <StreakCard 
+            currentStreak={5} 
+            longestStreak={10} 
+            totalDays={50} 
+            progress={60} 
+          />
         </div>
 
       </main>
