@@ -38,17 +38,17 @@ export default function Dashboard() {
                     <Home className="h-5 w-5" /> Home
                   </Button>
                   <Button variant="ghost" className="w-full justify-start gap-2 bg-blue-50 text-blue-600">
-                    <Layout className="h-5 w-5" /> Dashboard
+                    <Layout className="h-5 w-5" /> Pricing
                   </Button>
                   <Button variant="ghost" className="w-full justify-start gap-2">
-                    <Compass className="h-5 w-5" /> Discover
+                    <Compass className="h-5 w-5" /> Profile
                   </Button>
-                  <Button variant="ghost" className="w-full justify-start gap-2">
+                  {/* <Button variant="ghost" className="w-full justify-start gap-2">
                     <Info className="h-5 w-5" /> About us
                   </Button>
                   <Button variant="ghost" className="w-full justify-start gap-2">
                     <Settings className="h-5 w-5" /> Settings
-                  </Button>
+                  </Button> */}
                 </nav>
               </>
             </SheetContent>
@@ -68,17 +68,17 @@ export default function Dashboard() {
             <Home className="h-5 w-5" /> Home
           </Button>
           <Button variant="ghost" className="w-full justify-start gap-2 bg-blue-50 text-blue-600">
-            <Layout className="h-5 w-5" /> Dashboard
+            <Layout className="h-5 w-5" /> Pricing
           </Button>
           <Button variant="ghost" className="w-full justify-start gap-2">
-            <Compass className="h-5 w-5" /> Discover
+            <Compass className="h-5 w-5" /> Profile
           </Button>
-          <Button variant="ghost" className="w-full justify-start gap-2">
+          {/* <Button variant="ghost" className="w-full justify-start gap-2">
             <Info className="h-5 w-5" /> About us
           </Button>
           <Button variant="ghost" className="w-full justify-start gap-2">
             <Settings className="h-5 w-5" /> Settings
-          </Button>
+          </Button> */}
         </nav>
       </aside>
 
@@ -189,21 +189,6 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Chat Interface */}
-        <Card className="fixed bottom-4 right-4 w-80 hidden md:block">
-          <div className="p-4 border-b flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-blue-600" />
-              <span className="font-medium">AI Chatbot</span>
-            </div>
-            <Button variant="ghost" size="sm">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="p-4">
-            <Input placeholder="Type here..." className="bg-secondary" />
-          </div>
-        </Card>
       </main>
     </div>
   );
