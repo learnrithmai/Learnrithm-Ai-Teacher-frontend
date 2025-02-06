@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { StreakCard } from "@/components/streak-card";
+import { Courses } from "@/components/courses"; // <-- added import
 
 export default function Dashboard() {
   return (
@@ -142,25 +143,8 @@ export default function Dashboard() {
 
         {/* Courses and Insights Section */}
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Your Courses */}
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4">Your Courses</h3>
-            <div className="space-y-4">
-              {[
-                { title: "People History", date: "2 Jan 2024", views: "2.1k" },
-                { title: "Literature essays made easy", date: "15 Dec 2023", views: "801" },
-                { title: "Coding made easy", date: "11 Dec 2023", views: "1.2k" }
-              ].map((course, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
-                  <div>
-                    <h4 className="font-medium">{course.title}</h4>
-                    <p className="text-sm text-muted-foreground">{course.date}</p>
-                  </div>
-                  <div className="text-sm text-muted-foreground">{course.views} views</div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          {/* Replaced Your Courses Card with Courses component */}
+          <Courses />
 
           {/* Replaced Monthly Insight with StreakCard */}
           <StreakCard 
