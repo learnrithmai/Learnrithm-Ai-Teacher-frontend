@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Bell, Home, Settings, Layout, Compass, Info, ChevronDown, Plus, Bot, Menu } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ import { StreakCard } from "@/components/streak-card";
 import { Courses } from "@/components/courses"; // <-- added import
 
 export default function Dashboard() {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Navigation */}
@@ -103,8 +106,8 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <Button className="w-full">Create</Button>
-          </Card>
+            <Button className="w-full" onClick={() => router.push("/create")}>Create</Button>
+            </Card>
 
           <Card className="p-6">
             <div className="flex items-start justify-between mb-4">

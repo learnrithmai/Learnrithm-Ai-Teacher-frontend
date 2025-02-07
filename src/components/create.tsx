@@ -1,22 +1,24 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { useDropzone } from "react-dropzone"
-import { Rocket, Book, School, Globe, Upload, FileText, Video, File } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { toast } from "@/hooks/use-toast"
+import type React from "react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useDropzone } from "react-dropzone";
+import { Rocket, Book, School, Globe, Upload, FileText, Video, File } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
-const steps = ["Course", "Subtopic", "School", "Country", "Curriculum", "Learning Materials", "PDF"]
+const steps = ["Course", "Subtopic", "School", "Country", "Curriculum", "Learning Materials", "PDF"];
 
 export default function CreateCoursePage() {
-  const [currentStep, setCurrentStep] = useState(0)
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     course: "",
     subtopic: "",
@@ -29,11 +31,11 @@ export default function CreateCoursePage() {
       text: false,
     },
     pdf: null as File | null,
-  })
+  });
 
   const updateFormData = (key: keyof typeof formData, value: any) => {
-    setFormData((prev) => ({ ...prev, [key]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
 
   const updateLearningMaterials = (key: keyof typeof formData.learningMaterials) => {
     setFormData((prev) => ({
@@ -42,24 +44,24 @@ export default function CreateCoursePage() {
         ...prev.learningMaterials,
         [key]: !prev.learningMaterials[key],
       },
-    }))
-  }
+    }));
+  };
 
-  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1))
-  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 0))
+  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 0));
 
   const onDrop = (acceptedFiles: File[]) => {
-    updateFormData("pdf", acceptedFiles[0])
-  }
+    updateFormData("pdf", acceptedFiles[0]);
+  };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   const handleSubmit = () => {
-    console.log("Submitting form data:", formData)
+    console.log("Submitting form data:", formData);
     toast({
       title: "Course Created!",
       description: "Your course has been successfully created.",
-    })
+    });
     setFormData({
       course: "",
       subtopic: "",
@@ -72,18 +74,20 @@ export default function CreateCoursePage() {
         text: false,
       },
       pdf: null,
-    })
-    setCurrentStep(0)
-  }
+    });
+    setCurrentStep(0);
+    // Redirect to topics page after submission
+    router.push("/create/topics");
+  };
 
-  const isLastStep = currentStep === steps.length - 1
+  const isLastStep = currentStep === steps.length - 1;
   const canSubmit =
     formData.course &&
     formData.subtopic &&
     formData.school &&
     formData.country &&
     formData.curriculum &&
-    (formData.learningMaterials.pdf || formData.learningMaterials.video || formData.learningMaterials.text)
+    (formData.learningMaterials.pdf || formData.learningMaterials.video || formData.learningMaterials.text);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
@@ -115,7 +119,7 @@ export default function CreateCoursePage() {
       </div>
       <FloatingElements />
     </div>
-  )
+  );
 
   function renderStep() {
     switch (currentStep) {
@@ -129,7 +133,7 @@ export default function CreateCoursePage() {
               className="bg-input text-input-foreground"
             />
           </StepContainer>
-        )
+        );
       case 1:
         return (
           <StepContainer icon={<Book className="w-8 h-8" />} title="What subtopic interests you?">
@@ -140,7 +144,7 @@ export default function CreateCoursePage() {
               className="bg-input text-input-foreground"
             />
           </StepContainer>
-        )
+        );
       case 2:
         return (
           <StepContainer icon={<School className="w-8 h-8" />} title="What school do you attend?">
@@ -155,7 +159,7 @@ export default function CreateCoursePage() {
               </SelectContent>
             </Select>
           </StepContainer>
-        )
+        );
       case 3:
         return (
           <StepContainer icon={<Globe className="w-8 h-8" />} title="What's your country?">
@@ -170,7 +174,7 @@ export default function CreateCoursePage() {
               </SelectContent>
             </Select>
           </StepContainer>
-        )
+        );
       case 4:
         return (
           <StepContainer icon={<Book className="w-8 h-8" />} title="What's your curriculum?">
@@ -185,7 +189,7 @@ export default function CreateCoursePage() {
               </SelectContent>
             </Select>
           </StepContainer>
-        )
+        );
       case 5:
         return (
           <StepContainer icon={<File className="w-8 h-8" />} title="Choose your learning materials">
@@ -225,7 +229,7 @@ export default function CreateCoursePage() {
               </div>
             </div>
           </StepContainer>
-        )
+        );
       case 6:
         return (
           <StepContainer icon={<Upload className="w-8 h-8" />} title="Upload your own PDF (Optional)">
@@ -243,9 +247,9 @@ export default function CreateCoursePage() {
               Skip PDF Upload
             </Button>
           </StepContainer>
-        )
+        );
       default:
-        return null
+        return null;
     }
   }
 }
@@ -259,7 +263,7 @@ function StepContainer({ icon, title, children }: { icon: React.ReactNode; title
       </div>
       {children}
     </div>
-  )
+  );
 }
 
 function AnimatedProgress({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) {
@@ -275,7 +279,7 @@ function AnimatedProgress({ currentStep, totalSteps }: { currentStep: number; to
         <Rocket className="w-4 h-4 text-primary" />
       </motion.div>
     </div>
-  )
+  );
 }
 
 function FloatingElements() {
@@ -302,6 +306,5 @@ function FloatingElements() {
         <School className="w-16 h-16 text-primary opacity-20" />
       </motion.div>
     </>
-  )
+  );
 }
-
