@@ -1,10 +1,8 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import Head from "next/head";
 import React, { useEffect, useState } from "react";
 import { Button } from "./ui/button";
-import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import {
   Select,
@@ -16,9 +14,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type FormData = {
+  name: string;
+  email: string;
+  password: string;
+  country: string;
+  referralCode: string;
+};
+
+type Country = {
+  name: {
+    official: string;
+  };
+};
+
 function Signup() {
-  const [countries, setCountries] = useState([]);
-  const [formData, setFormData] = useState({
+  const [countries, setCountries] = useState<string[]>([]);
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
     password: "",
@@ -26,14 +38,15 @@ function Signup() {
     referralCode: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     console.log("Form Data Submitted:", formData);
   };
+
   useEffect(() => {
     const fetchCountries = async () => {
       try {
@@ -41,7 +54,7 @@ function Signup() {
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-        const data = await response.json();
+        const data: Country[] = await response.json();
         const countryList = data.map((country) => country.name.official).sort();
         setCountries(countryList);
       } catch (error) {
@@ -107,7 +120,7 @@ function Signup() {
               Country
             </label>
             <Select
-              onValueChange={(value) =>
+              onValueChange={(value: string) =>
                 setFormData({ ...formData, country: value })
               }
             >
@@ -117,7 +130,7 @@ function Signup() {
               <SelectContent className="bg-zinc-700 text-white max-h-60 w-full overflow-auto border border-gray-300">
                 <SelectGroup>
                   <SelectLabel>Select your country</SelectLabel>
-                  {countries.map((country, index) => (
+                  {countries.map((country: string, index: number) => (
                     <SelectItem value={country} key={index}>
                       {country}
                     </SelectItem>
@@ -146,12 +159,12 @@ function Signup() {
         </form>
         <p className="mt-6 text-center text-sm text-gray-500">
           Already have an account?{" "}
-          <a
+          <Link
             href="/signin"
             className="font-semibold text-indigo-600 hover:text-indigo-500 cursor-pointer"
           >
             Sign in
-          </a>
+          </Link>
         </p>
       </div>
     </div>
