@@ -1,14 +1,32 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bell, Home, Settings, Layout, Compass, Info, ChevronDown, Plus, Bot, Menu } from "lucide-react";
+import {
+  Bell,
+  Home,
+  Settings,
+  Layout,
+  Compass,
+  Info,
+  ChevronDown,
+  Plus,
+  Bot,
+  Menu,
+} from "lucide-react";
+import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { StreakCard } from "@/components/streak-card";
-import { Courses } from "@/components/courses"; // <-- added import
+import { Courses } from "@/components/courses";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -19,8 +37,13 @@ export default function Dashboard() {
       <div className="md:hidden fixed top-0 left-0 right-0 p-4 bg-background border-b z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layout className="h-6 w-6 text-blue-600" />
-            <span className="font-semibold text-xl">Learnrithm</span>
+            <Image
+              src="/images/Logomark.png"
+              alt="Learnrithm AI Logo"
+              width={32}
+              height={32}
+            />
+            <span className="font-semibold text-xl">Learnrithm AI</span>
           </div>
           <Sheet>
             <SheetTrigger asChild>
@@ -33,17 +56,25 @@ export default function Dashboard() {
                 <SheetHeader className="p-4 border-b">
                   <SheetTitle>
                     <div className="flex items-center gap-2">
-                      <Layout className="h-6 w-6 text-blue-600" />
-                      <span className="font-semibold text-xl">Learnrithm</span>
+                      <Image
+                        src="/images/Logomark.png"
+                        alt="Learnrithm AI Logo"
+                        width={32}
+                        height={32}
+                      />
+                      <span className="font-semibold text-xl">Learnrithm AI</span>
                     </div>
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex-1 p-4 space-y-2">
                   <Button variant="ghost" className="w-full justify-start gap-2">
-                    <Home className="h-5 w-5" /> Home
+                    <Home className="h-5 w-5" /> Pricing
                   </Button>
-                  <Button variant="ghost" className="w-full justify-start gap-2 bg-blue-50 text-blue-600">
-                    <Layout className="h-5 w-5" /> Pricing
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-2 bg-blue-50 text-blue-600"
+                  >
+                    <Layout className="h-5 w-5" /> Dashboard
                   </Button>
                   <Button variant="ghost" className="w-full justify-start gap-2">
                     <Compass className="h-5 w-5" /> Profile
@@ -58,15 +89,23 @@ export default function Dashboard() {
       {/* Desktop Sidebar */}
       <aside className="fixed left-0 top-0 h-full w-64 bg-card p-4 border-r hidden md:block">
         <div className="flex items-center gap-2 mb-8">
-          <Layout className="h-6 w-6 text-blue-600" />
-          <span className="font-semibold text-xl">Learnrithm</span>
+          <Image
+            src="/images/Logomark.png"
+            alt="Learnrithm AI Logo"
+            width={32}
+            height={32}
+          />
+          <span className="font-semibold text-xl">Learnrithm AI</span>
         </div>
         <nav className="space-y-2">
           <Button variant="ghost" className="w-full justify-start gap-2">
-            <Home className="h-5 w-5" /> Home
+            <Home className="h-5 w-5" /> Pricing
           </Button>
-          <Button variant="ghost" className="w-full justify-start gap-2 bg-blue-50 text-blue-600">
-            <Layout className="h-5 w-5" /> Pricing
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 bg-blue-50 text-blue-600"
+          >
+            <Layout className="h-5 w-5" /> Dashboard
           </Button>
           <Button variant="ghost" className="w-full justify-start gap-2">
             <Compass className="h-5 w-5" /> Profile
@@ -80,9 +119,9 @@ export default function Dashboard() {
         <header className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-semibold">Welcome Ayoubi!</h1>
           <div className="flex items-center gap-4">
-            <Input 
-              type="search" 
-              placeholder="Search..." 
+            <Input
+              type="search"
+              placeholder="Search..."
               className="w-64 hidden md:block"
             />
             <Button variant="ghost" size="icon">
@@ -106,8 +145,10 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <Button className="w-full" onClick={() => router.push("/create")}>Create</Button>
-            </Card>
+            <Button className="w-full" onClick={() => router.push("/create")}>
+              Create
+            </Button>
+          </Card>
 
           <Card className="p-6">
             <div className="flex items-start justify-between mb-4">
@@ -118,7 +159,9 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" className="w-full">Start Now</Button>
+            <Button variant="outline" className="w-full">
+              Start Now
+            </Button>
           </Card>
 
           <Card className="p-6">
@@ -146,10 +189,7 @@ export default function Dashboard() {
 
         {/* Courses and Insights Section */}
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Replaced Your Courses Card with Courses component */}
           <Courses />
-
-          {/* Replaced Monthly Insight with StreakCard */}
           <StreakCard 
             currentStreak={5} 
             longestStreak={10} 
@@ -157,7 +197,6 @@ export default function Dashboard() {
             progress={60} 
           />
         </div>
-
       </main>
     </div>
   );

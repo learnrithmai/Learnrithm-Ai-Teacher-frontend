@@ -27,7 +27,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       {/* Top Navigation Bar */}
-      <nav className="flex items-center justify-between p-4 shadow bg-background z-50">
+      <nav className="flex items-center justify-between p-4 bg-background z-50">
         <div className="flex items-center">
           {/* Hamburger menu for mobile */}
           <Button

@@ -52,21 +52,22 @@ export default function SubjectsTopicsPage() {
     );
   };
 
-  const handleSubmit = () => {
-    if (selectedTopics.length === 0) {
-      toast({
-        title: "No topics selected",
-        description: "Please select at least one topic to continue.",
-        variant: "destructive",
-      });
-      return;
-    }
-    console.log("Selected topics:", selectedTopics);
+const handleSubmit = () => {
+  if (selectedTopics.length === 0) {
     toast({
-      title: "Topics Submitted!",
-      description: `You've selected ${selectedTopics.length} topics.`,
+      title: "No topics selected",
+      description: "Please select at least one topic to continue.",
+      variant: "destructive",
     });
-  };
+    return;
+  }
+  console.log("Selected topics:", selectedTopics);
+  toast({
+    title: "Topics Submitted!",
+    description: `You've selected ${selectedTopics.length} topics.`,
+  });
+  router.push("/create/topics/courses"); // Redirect line added here
+};
 
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center">

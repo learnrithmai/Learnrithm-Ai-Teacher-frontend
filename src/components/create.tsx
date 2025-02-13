@@ -105,9 +105,14 @@ export default function CreateCoursePage() {
           </motion.div>
         </AnimatePresence>
         <div className="flex justify-between">
-          <Button onClick={prevStep} disabled={currentStep === 0} variant="outline">
-            Back
-          </Button>
+        <Button
+  onClick={prevStep}
+  disabled={currentStep === 0}
+  variant="outline"
+  className="text-blue-600 border-blue-600 hover:bg-blue-50"
+>
+  Back
+</Button>
           {isLastStep ? (
             <Button onClick={handleSubmit} disabled={!canSubmit}>
               Submit
