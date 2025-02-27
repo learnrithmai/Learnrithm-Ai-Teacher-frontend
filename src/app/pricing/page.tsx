@@ -1,8 +1,6 @@
-"use client"
-import { useState, useEffect } from "react"
-import type React from "react"
-
-import styles from "./pricing.module.css"
+'use client';
+import { useState, useEffect } from "react";
+import styles from "./pricing.module.css";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,36 +10,38 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
-export interface PricingTierFrequency {
-  id: string
-  value: string
-  label: string
-  priceSuffix: string
+// Local interfaces
+interface PricingTierFrequency {
+  id: string;
+  value: string;
+  label: string;
+  priceSuffix: string;
 }
 
-export interface PricingTier {
-  name: string
-  id: string
-  href: string
-  discountPrice: string | Record<string, string>
-  price: string | Record<string, string>
-  description: string | React.ReactNode
-  features: string[]
-  featured?: boolean
-  highlighted?: boolean
-  cta: string
-  soldOut?: boolean
+interface PricingTier {
+  name: string;
+  id: string;
+  href: string;
+  discountPrice: string | Record<string, string>;
+  price: string | Record<string, string>;
+  description: string | React.ReactNode;
+  features: string[];
+  featured?: boolean;
+  highlighted?: boolean;
+  cta: string;
+  soldOut?: boolean;
 }
 
-export const frequencies: PricingTierFrequency[] = [
+// Local constants (could be moved to a utility file as needed)
+const frequencies: PricingTierFrequency[] = [
   { id: "1", value: "1", label: "Monthly", priceSuffix: "/month" },
   { id: "2", value: "2", label: "Annually", priceSuffix: "/year" },
   { id: "3", value: "3", label: "Weekly", priceSuffix: "/weekly" },
-]
+];
 
-export const tiers: PricingTier[] = [
+const tiers: PricingTier[] = [
   {
     name: "Free Trial",
     id: "0",
@@ -67,10 +67,12 @@ export const tiers: PricingTier[] = [
     soldOut: false,
     cta: `Start Free Trial`,
   },
-]
+];
 
-const cn = (...args: Array<string | boolean | undefined | null>) => args.filter(Boolean).join(" ")
+// Utility function for joining class names.
+const cn = (...args: Array<string | boolean | undefined | null>) => args.filter(Boolean).join(" ");
 
+// CheckIcon component for list items.
 const CheckIcon = ({ className }: { className?: string }) => {
   return (
     <svg
@@ -85,26 +87,24 @@ const CheckIcon = ({ className }: { className?: string }) => {
         clipRule="evenodd"
       />
     </svg>
-  )
-}
+  );
+};
 
 export default function PricingPage() {
-  const [frequency, setFrequency] = useState(frequencies[0])
-  const [showExitIntent, setShowExitIntent] = useState(false)
-
-  const tier = tiers[0]
-  const bannerText = 'Save 25% when you use coupon code "LEARNSMART" at checkout'
+  const [frequency, setFrequency] = useState(frequencies[0]);
+  const [showExitIntent, setShowExitIntent] = useState(false);
+  const tier = tiers[0];
+  const bannerText = 'Save 25% when you use coupon code "LEARNSMART" at checkout';
 
   useEffect(() => {
     const handleMouseOut = (event: MouseEvent) => {
       if (event.clientY <= 0) {
-        setShowExitIntent(true)
+        setShowExitIntent(true);
       }
-    }
-
-    document.addEventListener("mouseout", handleMouseOut)
-    return () => document.removeEventListener("mouseout", handleMouseOut)
-  }, [])
+    };
+    document.addEventListener("mouseout", handleMouseOut);
+    return () => document.removeEventListener("mouseout", handleMouseOut);
+  }, []);
 
   return (
     <>
@@ -141,13 +141,12 @@ export default function PricingPage() {
                         frequency.value === option.value
                           ? "bg-sky-500/90 text-white dark:bg-sky-900/70 dark:text-white/70"
                           : "bg-transparent text-gray-500 hover:bg-sky-500/10",
-                        "cursor-pointer rounded-full px-2.5 py-2 transition-all",
+                        "cursor-pointer rounded-full px-2.5 py-2 transition-all"
                       )}
                       key={option.value}
                       htmlFor={option.value}
                     >
                       {option.label}
-
                       <button
                         value={option.value}
                         id={option.value}
@@ -155,7 +154,9 @@ export default function PricingPage() {
                         role="radio"
                         aria-checked={frequency.value === option.value}
                         onClick={() => {
-                          setFrequency(frequencies.find((f) => f.value === option.value) as PricingTierFrequency)
+                          setFrequency(
+                            frequencies.find((f) => f.value === option.value) as PricingTierFrequency
+                          );
                         }}
                       >
                         {option.label}
@@ -178,7 +179,6 @@ export default function PricingPage() {
                   </h4>
                   <div className="h-px flex-auto bg-gray-100 dark:bg-gray-700" />
                 </div>
-
                 <ul className="mt-10 grid grid-cols-1 gap-4 text-sm leading-6 text-gray-700 dark:text-gray-400">
                   {tier.features.map((feature) => (
                     <li key={feature} className="flex items-center gap-x-2 text-sm">
@@ -192,7 +192,7 @@ export default function PricingPage() {
                 <div
                   className={cn(
                     "rounded-2xl py-10 text-center ring-1 ring-inset ring-gray-300/50 dark:ring-gray-800/50 xl:flex xl:flex-col xl:justify-center xl:py-16",
-                    styles.fancyGlass,
+                    styles.fancyGlass
                   )}
                 >
                   <div className="mx-auto max-w-xs px-8">
@@ -202,18 +202,14 @@ export default function PricingPage() {
                           "text-black dark:text-white text-5xl font-bold tracking-tight",
                           tier.discountPrice && tier.discountPrice[frequency.value as keyof typeof tier.discountPrice]
                             ? "line-through"
-                            : "",
+                            : ""
                         )}
                       >
                         {typeof tier.price === "string" ? tier.price : tier.price[frequency.value]}
                       </span>
-
                       <span className="text-black dark:text-white">
-                        {typeof tier.discountPrice === "string"
-                          ? tier.discountPrice
-                          : tier.discountPrice[frequency.value]}
+                        {typeof tier.discountPrice === "string" ? tier.discountPrice : tier.discountPrice[frequency.value]}
                       </span>
-
                       <span className="text-sm font-semibold leading-6 tracking-wide text-gray-700 dark:text-gray-400">
                         {frequency.priceSuffix}
                       </span>
@@ -244,7 +240,9 @@ export default function PricingPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Special Offer!</AlertDialogTitle>
-            <AlertDialogDescription>Don't miss out on this exclusive discount!</AlertDialogDescription>
+            <AlertDialogDescription>
+              Don't miss out on this exclusive discount!
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <p className="text-center text-lg font-semibold">
@@ -252,11 +250,13 @@ export default function PricingPage() {
             </p>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowExitIntent(false)}>Not Interested</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setShowExitIntent(false)}>
+              Not Interested
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                // Here you can add logic to apply the promo code
-                setShowExitIntent(false)
+                // Insert logic to apply the promo code here
+                setShowExitIntent(false);
               }}
             >
               Redeem Now
@@ -265,6 +265,5 @@ export default function PricingPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }
-
