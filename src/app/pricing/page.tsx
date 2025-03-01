@@ -1,6 +1,16 @@
 'use client';
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import styles from "./pricing.module.css";
+import { Home, Layout, Compass, Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  Sheet, 
+  SheetTrigger, 
+  SheetContent, 
+  SheetHeader 
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,7 +63,7 @@ const tiers: PricingTier[] = [
       `Unlimited learning access all day, every day for an entire week—completely ad-free, giving you a pure learning experience anytime!`,
       `Learn with videos and images powered by AI, making complex ideas easy to understand and fun to learn.`,
       `Study in your local language with AI-powered translation, ensuring you fully understand the content in your preferred language.`,
-      `Learn based on your university curriculum or your country’s school system, with AI customizing lessons to keep you on track.`,
+      `Learn based on your university curriculum or your country's school system, with AI customizing lessons to keep you on track.`,
       `Upload your study materials—like notes or textbooks—and let AI personalize the learning experience for you.`,
       `AI summarizes YouTube videos for you, turning long videos into quick, key points so you can learn faster and more efficiently.`,
       `Your personal AI Study Buddy is always ready to help, explaining any topic and answering questions whenever you need.`,
@@ -108,125 +118,195 @@ export default function PricingPage() {
 
   return (
     <>
-      <div className={cn("flex flex-col w-full items-center", styles.fancyOverlay)}>
-        <div className="w-full flex flex-col items-center mb-24">
-          <div className="mx-auto max-w-7xl px-6 xl:px-8">
-            <div className="mx-auto max-w-2xl sm:text-center">
-              <h1 className="text-black dark:text-white text-4xl font-semibold max-w-xs sm:max-w-none md:text-6xl !leading-tight">
-                Pricing
-              </h1>
+      <div className="min-h-screen bg-gray-50/50">
+        {/* Mobile Navigation */}
+        <div className="md:hidden fixed top-0 left-0 right-0 p-4 bg-gray-50 border-b z-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Image src="/images/Logomark.png" alt="Learnrithm AI Logo" width={32} height={32} />
+              <span className="font-semibold text-xl">Learnrithm AI</span>
             </div>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <>
+                  <SheetHeader className="p-4 border-b">
+                    <div className="flex items-center gap-2">
+                      <Image src="/images/Logomark.png" alt="Learnrithm AI Logo" width={32} height={32} />
+                      <span className="font-semibold text-xl">Learnrithm AI</span>
+                    </div>
+                  </SheetHeader>
+                  <nav className="flex-1 p-4 space-y-2">
+                    <Button variant="ghost" className="w-full justify-start gap-2 bg-blue-50 text-blue-600">
+                      <Home className="h-5 w-5" /> Pricing
+                    </Button>
+                    <Link href="/dashboard">
+                      <Button variant="ghost" className="w-full justify-start gap-2">
+                        <Layout className="h-5 w-5" /> Dashboard
+                      </Button>
+                    </Link>
+                    <Link href="/profile">
+                      <Button variant="ghost" className="w-full justify-start gap-2">
+                        <Compass className="h-5 w-5" /> Profile
+                      </Button>
+                    </Link>
+                  </nav>
+                </>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
 
-            {bannerText ? (
-              <div className="flex justify-center my-4">
-                <p className="px-4 py-3 text-xs bg-sky-100 text-black dark:bg-sky-300/30 dark:text-white/80 rounded-xl">
-                  {bannerText}
-                </p>
-              </div>
-            ) : null}
+        {/* Desktop Sidebar */}
+        <aside className="fixed left-0 top-0 h-full w-64 bg-card p-4 border-r hidden md:block">
+          <div className="flex items-center gap-2 mb-8">
+            <Image src="/images/Logomark.png" alt="Learnrithm AI Logo" width={32} height={32} />
+            <span className="font-semibold text-xl">Learnrithm AI</span>
+          </div>
+          <nav className="space-y-2">
+            <Button variant="ghost" className="w-full justify-start gap-2 bg-blue-50 text-blue-600">
+              <Home className="h-5 w-5" /> Pricing
+            </Button>
+            <Link href="/dashboard">
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Layout className="h-5 w-5" /> Dashboard
+              </Button>
+            </Link>
+            <Link href="/profile">
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Compass className="h-5 w-5" /> Profile
+              </Button>
+            </Link>
+          </nav>
+        </aside>
 
-            {frequencies.length > 1 ? (
-              <div className="mt-16 flex justify-center">
-                <div
-                  role="radiogroup"
-                  className="grid gap-x-1 rounded-full p-1 text-center text-xs font-semibold leading-5 bg-white dark:bg-black ring-1 ring-inset ring-gray-200/30 dark:ring-gray-800"
-                  style={{
-                    gridTemplateColumns: `repeat(${frequencies.length}, minmax(0, 1fr))`,
-                  }}
-                >
-                  <p className="sr-only">Payment frequency</p>
-                  {frequencies.map((option) => (
-                    <label
-                      className={cn(
-                        frequency.value === option.value
-                          ? "bg-sky-500/90 text-white dark:bg-sky-900/70 dark:text-white/70"
-                          : "bg-transparent text-gray-500 hover:bg-sky-500/10",
-                        "cursor-pointer rounded-full px-2.5 py-2 transition-all"
-                      )}
-                      key={option.value}
-                      htmlFor={option.value}
-                    >
-                      {option.label}
-                      <button
-                        value={option.value}
-                        id={option.value}
-                        className="hidden"
-                        role="radio"
-                        aria-checked={frequency.value === option.value}
-                        onClick={() => {
-                          setFrequency(
-                            frequencies.find((f) => f.value === option.value) as PricingTierFrequency
-                          );
+        {/* Main Content */}
+        <div className="md:ml-64">
+          <div className="mt-20 md:mt-0">
+            <div className={cn("flex flex-col w-full items-center", styles.fancyOverlay)}>
+              <div className="w-full flex flex-col items-center mb-24">
+                <div className="mx-auto max-w-7xl px-6 xl:px-8">
+                  <div className="mx-auto max-w-2xl sm:text-center">
+                    <h1 className="text-black dark:text-white text-4xl font-semibold max-w-xs sm:max-w-none md:text-6xl !leading-tight">
+                      Pricing
+                    </h1>
+                  </div>
+
+                  {bannerText ? (
+                    <div className="flex justify-center my-4">
+                      <p className="px-4 py-3 text-xs bg-sky-100 text-black dark:bg-sky-300/30 dark:text-white/80 rounded-xl">
+                        {bannerText}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {frequencies.length > 1 ? (
+                    <div className="mt-16 flex justify-center">
+                      <div
+                        role="radiogroup"
+                        className="grid gap-x-1 rounded-full p-1 text-center text-xs font-semibold leading-5 bg-white dark:bg-black ring-1 ring-inset ring-gray-200/30 dark:ring-gray-800"
+                        style={{
+                          gridTemplateColumns: `repeat(${frequencies.length}, minmax(0, 1fr))`,
                         }}
                       >
-                        {option.label}
-                      </button>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="mt-12" aria-hidden="true"></div>
-            )}
-
-            <div className="flex flex-wrap xl:flex-nowrap items-center bg-white dark:bg-gray-900/80 backdrop-blur-md mx-auto mt-4 max-w-2xl rounded-3xl ring-1 ring-gray-300/70 dark:ring-gray-700 xl:mx-0 xl:flex xl:max-w-none">
-              <div className="p-8 sm:p-10 xl:flex-auto">
-                <h3 className="text-black dark:text-white text-2xl font-bold tracking-tight">{tier.name}</h3>
-                <p className="mt-6 text-base leading-7 text-gray-700 dark:text-gray-400">{tier.description}</p>
-                <div className="mt-12 flex items-center gap-x-4">
-                  <h4 className="flex-none text-sm font-semibold leading-6 text-black dark:text-white">
-                    Included features
-                  </h4>
-                  <div className="h-px flex-auto bg-gray-100 dark:bg-gray-700" />
-                </div>
-                <ul className="mt-10 grid grid-cols-1 gap-4 text-sm leading-6 text-gray-700 dark:text-gray-400">
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-x-2 text-sm">
-                      <CheckIcon className="h-6 w-6 flex-none text-sky-500" aria-hidden="true" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="-mt-2 p-2 xl:pr-8 xl:mt-0 w-full xl:max-w-md xl:flex-shrink-0">
-                <div
-                  className={cn(
-                    "rounded-2xl py-10 text-center ring-1 ring-inset ring-gray-300/50 dark:ring-gray-800/50 xl:flex xl:flex-col xl:justify-center xl:py-16",
-                    styles.fancyGlass
+                        <p className="sr-only">Payment frequency</p>
+                        {frequencies.map((option) => (
+                          <label
+                            className={cn(
+                              frequency.value === option.value
+                                ? "bg-sky-500/90 text-white dark:bg-sky-900/70 dark:text-white/70"
+                                : "bg-transparent text-gray-500 hover:bg-sky-500/10",
+                              "cursor-pointer rounded-full px-2.5 py-2 transition-all"
+                            )}
+                            key={option.value}
+                            htmlFor={option.value}
+                          >
+                            {option.label}
+                            <button
+                              value={option.value}
+                              id={option.value}
+                              className="hidden"
+                              role="radio"
+                              aria-checked={frequency.value === option.value}
+                              onClick={() => {
+                                setFrequency(
+                                  frequencies.find((f) => f.value === option.value) as PricingTierFrequency
+                                );
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-12" aria-hidden="true"></div>
                   )}
-                >
-                  <div className="mx-auto max-w-xs px-8">
-                    <p className="mt-6 flex items-baseline justify-center gap-x-2">
-                      <span
+
+                  <div className="flex flex-wrap xl:flex-nowrap items-center bg-white dark:bg-gray-900/80 backdrop-blur-md mx-auto mt-4 max-w-2xl rounded-3xl ring-1 ring-gray-300/70 dark:ring-gray-700 xl:mx-0 xl:flex xl:max-w-none">
+                    <div className="p-8 sm:p-10 xl:flex-auto">
+                      <h3 className="text-black dark:text-white text-2xl font-bold tracking-tight">{tier.name}</h3>
+                      <p className="mt-6 text-base leading-7 text-gray-700 dark:text-gray-400">{tier.description}</p>
+                      <div className="mt-12 flex items-center gap-x-4">
+                        <h4 className="flex-none text-sm font-semibold leading-6 text-black dark:text-white">
+                          Included features
+                        </h4>
+                        <div className="h-px flex-auto bg-gray-100 dark:bg-gray-700" />
+                      </div>
+                      <ul className="mt-10 grid grid-cols-1 gap-4 text-sm leading-6 text-gray-700 dark:text-gray-400">
+                        {tier.features.map((feature) => (
+                          <li key={feature} className="flex items-center gap-x-2 text-sm">
+                            <CheckIcon className="h-6 w-6 flex-none text-sky-500" aria-hidden="true" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="-mt-2 p-2 xl:pr-8 xl:mt-0 w-full xl:max-w-md xl:flex-shrink-0">
+                      <div
                         className={cn(
-                          "text-black dark:text-white text-5xl font-bold tracking-tight",
-                          tier.discountPrice && tier.discountPrice[frequency.value as keyof typeof tier.discountPrice]
-                            ? "line-through"
-                            : ""
+                          "rounded-2xl py-10 text-center ring-1 ring-inset ring-gray-300/50 dark:ring-gray-800/50 xl:flex xl:flex-col xl:justify-center xl:py-16",
+                          styles.fancyGlass
                         )}
                       >
-                        {typeof tier.price === "string" ? tier.price : tier.price[frequency.value]}
-                      </span>
-                      <span className="text-black dark:text-white">
-                        {typeof tier.discountPrice === "string" ? tier.discountPrice : tier.discountPrice[frequency.value]}
-                      </span>
-                      <span className="text-sm font-semibold leading-6 tracking-wide text-gray-700 dark:text-gray-400">
-                        {frequency.priceSuffix}
-                      </span>
-                    </p>
-                    <a
-                      href="#"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex justify-center mt-8 flex-shrink-0"
-                    >
-                      <button className="inline-flex items-center justify-center font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-sky-300/70 text-sky-foreground hover:bg-sky-300/90 dark:bg-sky-700 dark:hover:bg-sky-700/90 text-black dark:text-white h-12 rounded-md px-6 sm:px-10 text-md">
-                        {tier.cta}
-                      </button>
-                    </a>
-                    <p className="mt-2 text-xs leading-5 text-gray-700 dark:text-gray-400">
-                      Sign up in seconds, no credit card required.
-                    </p>
+                        <div className="mx-auto max-w-xs px-8">
+                          <p className="mt-6 flex items-baseline justify-center gap-x-2">
+                            <span
+                              className={cn(
+                                "text-black dark:text-white text-5xl font-bold tracking-tight",
+                                tier.discountPrice && tier.discountPrice[frequency.value as keyof typeof tier.discountPrice]
+                                  ? "line-through"
+                                  : ""
+                              )}
+                            >
+                              {typeof tier.price === "string" ? tier.price : tier.price[frequency.value]}
+                            </span>
+                            <span className="text-black dark:text-white">
+                              {typeof tier.discountPrice === "string" ? tier.discountPrice : tier.discountPrice[frequency.value]}
+                            </span>
+                            <span className="text-sm font-semibold leading-6 tracking-wide text-gray-700 dark:text-gray-400">
+                              {frequency.priceSuffix}
+                            </span>
+                          </p>
+                          <a
+                            href={tier.href}
+                            className="flex justify-center mt-8 flex-shrink-0"
+                          >
+                            <button className="inline-flex items-center justify-center font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-sky-300/70 text-sky-foreground hover:bg-sky-300/90 dark:bg-sky-700 dark:hover:bg-sky-700/90 text-black dark:text-white h-12 rounded-md px-6 sm:px-10 text-md">
+                              {tier.cta}
+                            </button>
+                          </a>
+                          <p className="mt-2 text-xs leading-5 text-gray-700 dark:text-gray-400">
+                            Sign up in seconds, no credit card required.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

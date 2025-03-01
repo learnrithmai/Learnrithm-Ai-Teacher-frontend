@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Bell,
   Home,
@@ -67,18 +68,22 @@ export default function Dashboard() {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex-1 p-4 space-y-2">
-                  <Button variant="ghost" className="w-full justify-start gap-2">
-                    <Home className="h-5 w-5" /> Pricing
-                  </Button>
+                  <Link href="/pricing">
+                    <Button variant="ghost" className="w-full justify-start gap-2">
+                      <Home className="h-5 w-5" /> Pricing
+                    </Button>
+                  </Link>
                   <Button
                     variant="ghost"
                     className="w-full justify-start gap-2 bg-blue-50 text-blue-600"
                   >
                     <Layout className="h-5 w-5" /> Dashboard
                   </Button>
-                  <Button variant="ghost" className="w-full justify-start gap-2">
-                    <Compass className="h-5 w-5" /> Profile
-                  </Button>
+                  <Link href="/profile">
+                    <Button variant="ghost" className="w-full justify-start gap-2">
+                      <Compass className="h-5 w-5" /> Profile
+                    </Button>
+                  </Link>
                 </nav>
               </>
             </SheetContent>
@@ -98,18 +103,22 @@ export default function Dashboard() {
           <span className="font-semibold text-xl">Learnrithm AI</span>
         </div>
         <nav className="space-y-2">
-          <Button variant="ghost" className="w-full justify-start gap-2">
-            <Home className="h-5 w-5" /> Pricing
-          </Button>
+          <Link href="/pricing">
+            <Button variant="ghost" className="w-full justify-start gap-2">
+              <Home className="h-5 w-5" /> Pricing
+            </Button>
+          </Link>
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 bg-blue-50 text-blue-600"
           >
             <Layout className="h-5 w-5" /> Dashboard
           </Button>
-          <Button variant="ghost" className="w-full justify-start gap-2">
-            <Compass className="h-5 w-5" /> Profile
-          </Button>
+          <Link href="/profile">
+            <Button variant="ghost" className="w-full justify-start gap-2">
+              <Compass className="h-5 w-5" /> Profile
+            </Button>
+          </Link>
         </nav>
       </aside>
 
@@ -127,10 +136,12 @@ export default function Dashboard() {
             <Button variant="ghost" size="icon">
               <Bell className="h-5 w-5" />
             </Button>
-            <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" />
-              <AvatarFallback>CN</AvatarFallback>
-            </Avatar>
+            <Link href="/profile">
+              <Avatar className="cursor-pointer">
+                <AvatarImage src="https://github.com/shadcn.png" />
+                <AvatarFallback>CN</AvatarFallback>
+              </Avatar>
+            </Link>
           </div>
         </header>
 

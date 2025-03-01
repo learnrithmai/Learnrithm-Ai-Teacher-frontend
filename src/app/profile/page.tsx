@@ -64,9 +64,11 @@ export default function ProfilePage() {
                     </div>
                   </SheetHeader>
                   <nav className="flex-1 p-4 space-y-2">
-                    <Button variant="ghost" className="w-full justify-start gap-2">
-                      <Home className="h-5 w-5" /> Pricing
-                    </Button>
+                    <Link href="/pricing">
+                      <Button variant="ghost" className="w-full justify-start gap-2">
+                        <Home className="h-5 w-5" /> Pricing
+                      </Button>
+                    </Link>
                     <Link href="/dashboard">
                       <Button variant="ghost" className="w-full justify-start gap-2">
                         <Layout className="h-5 w-5" /> Dashboard
@@ -89,9 +91,11 @@ export default function ProfilePage() {
             <span className="font-semibold text-xl">Learnrithm AI</span>
           </div>
           <nav className="space-y-2">
-            <Button variant="ghost" className="w-full justify-start gap-2">
-              <Home className="h-5 w-5" /> Pricing
-            </Button>
+            <Link href="/pricing">
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Home className="h-5 w-5" /> Pricing
+              </Button>
+            </Link>
             <Link href="/dashboard">
               <Button variant="ghost" className="w-full justify-start gap-2">
                 <Layout className="h-5 w-5" /> Dashboard
