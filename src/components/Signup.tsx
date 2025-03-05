@@ -2,23 +2,43 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { gsap } from "gsap"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowRight } from "lucide-react"
+import { countries } from "@/lib/data"
 
 export default function Signup() {
+  // Use ref to track component mount status
+  const hasAnimated = useRef(false);
+
   useEffect(() => {
-    gsap.from(".animate-in", {
-      y: 20,
-      opacity: 0,
-      duration: 0.8,
-      stagger: 0.1,
-      ease: "power3.out",
-    })
-  }, [])
+    // Force a repaint to fix blurry content
+    document.body.style.opacity = '0.99';
+    setTimeout(() => {
+      document.body.style.opacity = '1';
+    }, 10);
+    
+    // Create a GSAP context for better cleanup
+    const ctx = gsap.context(() => {
+      // Only run animation if it hasn't run yet
+      if (!hasAnimated.current) {
+        gsap.from(".animate-in", {
+          y: 20,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: "power3.out",
+        });
+        hasAnimated.current = true;
+      }
+    });
+    
+    // Clear animation context on unmount
+    return () => ctx.revert();
+  }, []);
 
   const handleGoogleSignIn = () => {
     // Implement Google OAuth
@@ -30,11 +50,10 @@ export default function Signup() {
       {/* Left: Branding Section */}
       <div className="hidden lg:flex flex-col bg-[#0A0A0A] text-white p-12 justify-between">
         <div className="animate-in">
-          <Image src="/logo.svg" width={120} height={40} alt="Logo" className="mb-20" />
+          <Image src="/logo.svg" width={120} height={40} alt="Logo" className="mb-20" priority />
           <h1 className="text-4xl font-bold tracking-tight mb-4">Start your learning journey today</h1>
           <p className="text-gray-400 text-lg">Join thousands of students and begin your path to success</p>
         </div>
-      
       </div>
 
       {/* Right: Form Section */}
@@ -111,12 +130,13 @@ export default function Signup() {
                 <SelectTrigger className="h-12 px-4 bg-gray-50 border-2 border-gray-100 hover:border-gray-200 transition-colors focus:border-blue-600 focus:ring-0 focus:ring-offset-0">
                   <SelectValue placeholder="Select your country" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   <SelectGroup>
-                    <SelectItem value="us">United States</SelectItem>
-                    <SelectItem value="uk">United Kingdom</SelectItem>
-                    <SelectItem value="ca">Canada</SelectItem>
-                    {/* Add more countries */}
+                    {countries.map((country) => (
+                      <SelectItem key={country} value={country.toLowerCase().replace(/\s+/g, '-')}>
+                        {country}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -145,7 +165,7 @@ export default function Signup() {
 
             <p className="text-center text-sm text-gray-500">
               Already have an account?{" "}
-              <Link href="/signin" className="text-blue-600 hover:text-blue-700 font-medium">
+              <Link href="/signin" prefetch={true} className="text-blue-600 hover:text-blue-700 font-medium">
                 Sign in
               </Link>
             </p>
@@ -155,4 +175,3 @@ export default function Signup() {
     </div>
   )
 }
-

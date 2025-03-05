@@ -2,22 +2,41 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { gsap } from "gsap"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowRight } from "lucide-react"
 
 export default function Signin() {
+  // Use ref to track component mount status
+  const hasAnimated = useRef(false);
+
   useEffect(() => {
-    gsap.from(".animate-in", {
-      y: 20,
-      opacity: 0,
-      duration: 0.8,
-      stagger: 0.1,
-      ease: "power3.out",
-    })
-  }, [])
+    // Force a repaint to fix blurry content
+    document.body.style.opacity = '0.99';
+    setTimeout(() => {
+      document.body.style.opacity = '1';
+    }, 10);
+    
+    // Create a GSAP context for better cleanup
+    const ctx = gsap.context(() => {
+      // Only run animation if it hasn't run yet
+      if (!hasAnimated.current) {
+        gsap.from(".animate-in", {
+          y: 20,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: "power3.out",
+        });
+        hasAnimated.current = true;
+      }
+    });
+    
+    // Clear animation context on unmount
+    return () => ctx.revert();
+  }, []);
 
   const handleGoogleSignIn = () => {
     // Implement Google OAuth
@@ -29,7 +48,7 @@ export default function Signin() {
       {/* Left: Branding Section */}
       <div className="hidden lg:flex flex-col bg-[#0A0A0A] text-white p-12 justify-between">
         <div className="animate-in">
-          <Image src="/logo.svg" width={120} height={40} alt="Logo" className="mb-20" />
+          <Image src="/logo.svg" width={120} height={40} alt="Logo" className="mb-20" priority />
           <h1 className="text-4xl font-bold tracking-tight mb-4">Welcome back!</h1>
         </div>
        
@@ -104,7 +123,7 @@ export default function Signin() {
                 <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-600" />
                 Remember me
               </label>
-              <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+              <Link href="/forgot-password" prefetch={true} className="text-sm font-medium text-blue-600 hover:text-blue-700">
                 Forgot password?
               </Link>
             </div>
@@ -116,7 +135,7 @@ export default function Signin() {
 
             <p className="text-center text-sm text-gray-500">
               Don't have an account?{" "}
-              <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+              <Link href="/signup" prefetch={true} className="text-blue-600 hover:text-blue-700 font-medium">
                 Sign up
               </Link>
             </p>
@@ -126,4 +145,3 @@ export default function Signin() {
     </div>
   )
 }
-

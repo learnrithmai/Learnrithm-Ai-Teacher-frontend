@@ -16,6 +16,16 @@ export function ChatLayout() {
   const [showWelcome, setShowWelcome] = React.useState(true)
   const [darkMode, setDarkMode] = React.useState(false)
 
+  // Wrap toggle function in useCallback to prevent infinite render loops
+  const handleToggleDarkMode = React.useCallback((value: boolean) => {
+    setDarkMode(value);
+  }, []);
+
+  // Use memoized callback for sidebar toggle to maintain stable function references
+  const handleToggleSidebar = React.useCallback(() => {
+    setSidebarOpen(prev => !prev);
+  }, [setSidebarOpen]);
+
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setShowWelcome(false)
@@ -48,8 +58,8 @@ export function ChatLayout() {
         )}
       </AnimatePresence>
 
-      {/* Sidebar - Pass the required props */}
-      <ChatSidebar darkMode={darkMode} setDarkMode={setDarkMode} />
+      {/* Sidebar - Pass the required props with memoized callback */}
+      <ChatSidebar darkMode={darkMode} setDarkMode={handleToggleDarkMode} />
 
       {/* Toggle Sidebar Button */}
       <motion.div
@@ -58,7 +68,7 @@ export function ChatLayout() {
         animate={{ left: sidebarOpen ? "300px" : "0px" }}
         transition={{ duration: 0.3 }}
       >
-        <Button variant="ghost" size="icon" className="mt-4 ml-4" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        <Button variant="ghost" size="icon" className="mt-4 ml-4" onClick={handleToggleSidebar}>
           {sidebarOpen ? <ChevronLeft className="h-6 w-6" /> : <ChevronRight className="h-6 w-6" />}
         </Button>
       </motion.div>
