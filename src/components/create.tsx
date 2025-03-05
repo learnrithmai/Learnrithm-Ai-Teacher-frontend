@@ -14,6 +14,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { universities } from "@/lib/data"; // Import universities
+import axios from "axios";
+
+// Constants for API endpoint
+const SERVER_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Added education level step
 const steps = ["Course", "Subtopic", "Education Level", "Country", "School", "Curriculum", "Learning Materials", "PDF"];
@@ -35,6 +39,14 @@ export default function CreateCoursePage() {
     },
     pdf: null as File | null,
   });
+  
+  // Added states for API integration
+  const [processing, setProcessing] = useState(false);
+  const [paidMember, setPaidMember] = useState(false);
+  const [valid, setValid] = useState(true);
+  const [subtopics, setSubtopics] = useState<string[]>([]);
+  const [language, setLanguage] = useState("English");
+  const [selectedLevel, setSelectedLevel] = useState("easy");
 
   // Custom dropdown state
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
@@ -47,6 +59,44 @@ export default function CreateCoursePage() {
   const schoolDropdownRef = useRef<HTMLDivElement>(null);
   const curriculumDropdownRef = useRef<HTMLDivElement>(null);
   const educationLevelDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Check user verification and membership on load
+  useEffect(() => {
+    const isVerified = sessionStorage.getItem("isVerified");
+    if (!isVerified) {
+      router.push("/create");
+    }
+    
+    if (sessionStorage.getItem("type") !== "free") {
+      setPaidMember(true);
+    } else {
+      const validCheck = async (uid: string) => {
+        try {
+          const dataToSend = {
+            user: uid,
+          };
+          const postURL = `${SERVER_URL}/api/valid`;
+          const res = await axios.post(postURL, dataToSend);
+          const responseData = res.data as { message: string };
+          if (responseData.message !== "valid") {
+            setValid(false);
+          }
+        } catch (error) {
+          console.error("Error checking validity:", error);
+          toast({
+            title: "Error",
+            description: "Failed to verify your account status.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      const uid = sessionStorage.getItem("uid");
+      if (uid) {
+        validCheck(uid);
+      }
+    }
+  }, [router]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -73,6 +123,12 @@ export default function CreateCoursePage() {
 
   const updateFormData = (key: keyof typeof formData, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
+    
+    // If updating subtopic, parse and update subtopics array
+    if (key === "subtopic") {
+      const splitSubtopics = value.split(",").map((st: string) => st.trim()).filter(Boolean);
+      setSubtopics(splitSubtopics);
+    }
   };
 
   const updateLearningMaterials = (key: keyof typeof formData.learningMaterials) => {
@@ -110,29 +166,144 @@ export default function CreateCoursePage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
+  // Check if membership required for certain features
+  const checkPaidMembership = () => {
+    if (!paidMember) {
+      toast({
+        title: "Premium Feature",
+        description: "This feature is available for paid members only.",
+        variant: "default",
+      });
+      return false;
+    }
+    return true;
+  };
+  
+  // Send prompt to API and handle response
+  const sendPrompt = async (prompt: string, mainTopic: string, selectedType: string) => {
+    setProcessing(true);
+    
+    const dataToSend = {
+      prompt: prompt,
+    };
+    
+    try {
+      const postURL = `${SERVER_URL}/api/prompt`;
+      const res = await axios.post(postURL, dataToSend);
+      const generatedText = (res.data as { generatedText: string }).generatedText;
+      
+      // Clean JSON string and parse
+      const cleanedJsonString = generatedText
+        .replace(/```json/g, "")
+        .replace(/```/g, "");
+        
+      try {
+        const parsedJson = JSON.parse(cleanedJsonString);
+        setProcessing(false);
+        
+        // Navigate to topics page with data
+        router.push(`/create/topics?data=${encodeURIComponent(JSON.stringify({
+          jsonData: parsedJson,
+          mainTopic: mainTopic.toLowerCase(),
+          type: formData.learningMaterials.video ? "video & text course" : "text & image course",
+          language: language,
+        }))}`);
+        
+      } catch (error) {
+        console.error("JSON parsing error:", error);
+        // Retry on parsing error
+        sendPrompt(prompt, mainTopic, selectedType);
+      }
+    } catch (error) {
+      console.error("API error:", error);
+      // Retry on API error
+      sendPrompt(prompt, mainTopic, selectedType);
+    }
+  };
+
   const handleSubmit = () => {
+    // Basic validation
+    if (!formData.course.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please enter a course name.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!formData.subtopic.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please enter at least one subtopic.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!valid) {
+      toast({
+        title: "Account Issue",
+        description: "There's an issue with your account. Please contact support.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Determine number of topics based on membership
+    const topicCount = paidMember ? "7" : "4";
+    
+    // Create the prompt for the AI based on user selections
+    const prompt = `Generate a list of Strict ${topicCount} topics based on the ${selectedLevel} or if the user has a ${formData.school} and should strictly get the information from ${formData.school} websites and any number sub topic for each topic for main title ${formData.course.toLowerCase()}, everything in single line. Those topics should be in ${language} language,Those ${topicCount} topics should Strictly include these topics :- ${formData.subtopic.toLowerCase()}. Strictly Keep theory, youtube, image field empty. Generate in the form of JSON in this format {
+      "${formData.course.toLowerCase()}": [
+       {
+       "title": "Topic Title",
+       "subtopics": [
+        {
+        "title": "Sub Topic Title",
+        "theory": "",
+        "youtube": "",
+        "image": "",
+        "done": false
+        },
+        {
+        "title": "Sub Topic Title",
+        "theory": "",
+        "youtube": "",
+        "image": "",
+        "done": false
+        }
+       ]
+       },
+       {
+       "title": "Topic Title",
+       "subtopics": [
+        {
+        "title": "Sub Topic Title",
+        "theory": "",
+        "youtube": "",
+        "image": "",
+        "done": false
+        },
+        {
+        "title": "Sub Topic Title",
+        "theory": "",
+        "youtube": "",
+        "image": "",
+        "done": false
+        }
+       ]
+       }
+      ]
+    }`;
+    
+    // Determine selected type based on learning materials
+    const selectedType = formData.learningMaterials.video ? "Video & Text Course" : "Text & Image Course";
+    
+    // Send the prompt to API
+    sendPrompt(prompt, formData.course, selectedType);
+    
     console.log("Submitting form data:", formData);
-    toast({
-      title: "Course Created!",
-      description: "Your course has been successfully created.",
-    });
-    setFormData({
-      course: "",
-      subtopic: "",
-      educationLevel: "",
-      school: "",
-      country: "",
-      curriculum: "",
-      learningMaterials: {
-        pdf: false,
-        video: false,
-        text: false,
-      },
-      pdf: null,
-    });
-    setCurrentStep(0);
-    // Redirect to topics page after submission
-    router.push("/create/topics");
   };
 
   const isLastStep = currentStep === steps.length - 1;
@@ -174,8 +345,8 @@ export default function CreateCoursePage() {
             Back
           </Button>
           {isLastStep ? (
-            <Button onClick={handleSubmit} disabled={!canSubmit}>
-              Submit
+            <Button onClick={handleSubmit} disabled={!canSubmit || processing}>
+              {processing ? "Creating..." : "Submit"}
             </Button>
           ) : (
             <Button onClick={nextStep}>Next</Button>
@@ -203,11 +374,14 @@ export default function CreateCoursePage() {
         return (
           <StepContainer icon={<Book className="w-8 h-8" />} title="What subtopic interests you?">
             <Input
-              placeholder="Enter subtopic"
+              placeholder="Enter subtopics (comma separated)"
               value={formData.subtopic}
               onChange={(e) => updateFormData("subtopic", e.target.value)}
               className="bg-input text-input-foreground"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              {paidMember ? "Enter as many subtopics as you want" : "For free members, limited to 5 subtopics"}
+            </p>
           </StepContainer>
         );
       case 2:
@@ -234,6 +408,7 @@ export default function CreateCoursePage() {
                     className="p-2 hover:bg-gray-100 cursor-pointer"
                     onClick={() => {
                       updateFormData("educationLevel", "highSchool");
+                      setSelectedLevel("medium");
                       setEducationLevelDropdownOpen(false);
                     }}
                   >
@@ -243,6 +418,7 @@ export default function CreateCoursePage() {
                     className="p-2 hover:bg-gray-100 cursor-pointer"
                     onClick={() => {
                       updateFormData("educationLevel", "kg12");
+                      setSelectedLevel("easy");
                       setEducationLevelDropdownOpen(false);
                     }}
                   >
@@ -252,6 +428,7 @@ export default function CreateCoursePage() {
                     className="p-2 hover:bg-gray-100 cursor-pointer"
                     onClick={() => {
                       updateFormData("educationLevel", "university");
+                      setSelectedLevel("advanced");
                       setEducationLevelDropdownOpen(false);
                     }}
                   >
@@ -261,6 +438,7 @@ export default function CreateCoursePage() {
                     className="p-2 hover:bg-gray-100 cursor-pointer"
                     onClick={() => {
                       updateFormData("educationLevel", "skill");
+                      setSelectedLevel("medium");
                       setEducationLevelDropdownOpen(false);
                     }}
                   >
@@ -268,6 +446,30 @@ export default function CreateCoursePage() {
                   </div>
                 </div>
               )}
+            </div>
+            <div className="mt-3">
+              <Label className="text-sm font-medium">Select Language</Label>
+              <Select 
+                value={language} 
+                onValueChange={(value) => {
+                  if (!paidMember) {
+                    checkPaidMembership();
+                    return;
+                  }
+                  setLanguage(value);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="English">English</SelectItem>
+                  <SelectItem value="Spanish">Spanish</SelectItem>
+                  <SelectItem value="French">French</SelectItem>
+                  <SelectItem value="German">German</SelectItem>
+                  <SelectItem value="Chinese">Chinese</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </StepContainer>
         );
@@ -406,15 +608,20 @@ export default function CreateCoursePage() {
                   <span>PDF Materials</span>
                 </Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2" onClick={() => !paidMember && checkPaidMembership()}>
                 <Checkbox
                   id="video"
                   checked={formData.learningMaterials.video}
-                  onCheckedChange={() => updateLearningMaterials("video")}
+                  onCheckedChange={() => {
+                    if (paidMember) {
+                      updateLearningMaterials("video");
+                    }
+                  }}
+                  disabled={!paidMember}
                 />
                 <Label htmlFor="video" className="flex items-center space-x-2">
                   <Video className="w-4 h-4" />
-                  <span>Video Lessons</span>
+                  <span>Video Lessons {!paidMember && "(Premium)"}</span>
                 </Label>
               </div>
               <div className="flex items-center space-x-2">

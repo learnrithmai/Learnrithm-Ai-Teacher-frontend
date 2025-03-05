@@ -39,6 +39,7 @@
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.2",
     "@types/three": "^0.173.0",
+    "axios": "^1.8.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
@@ -67,6 +68,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/axios": "^0.9.36",
     "@types/lodash.debounce": "^4.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
