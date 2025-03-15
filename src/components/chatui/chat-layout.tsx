@@ -23,8 +23,8 @@ export function ChatLayout() {
 
   // Use memoized callback for sidebar toggle to maintain stable function references
   const handleToggleSidebar = React.useCallback(() => {
-    setSidebarOpen(prev => !prev);
-  }, [setSidebarOpen]);
+    setSidebarOpen(!sidebarOpen);
+  }, [setSidebarOpen, sidebarOpen]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -52,7 +52,7 @@ export function ChatLayout() {
               className="flex items-center gap-4"
             >
               <GraduationCap className="h-12 w-12 text-primary" />
-              <h1 className="text-4xl font-bold text-primary">EduChat AI</h1>
+              <h1 className="text-4xl font-bold text-primary">Learnrithm Ai</h1>
             </motion.div>
           </motion.div>
         )}

@@ -15,7 +15,7 @@ import { useChat } from "@/components/chatui/chat-provider"
 export function ChatInput() {
   const [input, setInput] = React.useState("")
   const [activePill, setActivePill] = React.useState<string | null>(null)
-  const { files, addFiles, removeFile } = useFileUpload()
+  const { files, addFiles, removeFile, clearFiles } = useFileUpload()
   const { actions } = useChat()
 
   const handleSend = React.useCallback(() => {
@@ -29,6 +29,7 @@ export function ChatInput() {
           file,
         })
       })
+      clearFiles()
     }
 
     if (input.trim()) {
@@ -36,11 +37,18 @@ export function ChatInput() {
         role: "user",
         content: input.trim(),
       })
+
+      // Simulate AI response (for testing)
+      setTimeout(() => {
+        actions.addMessage({
+          role: "assistant",
+          content: `This is a response to: "${input.trim()}"`,
+        })
+      }, 1000)
     }
 
     setInput("")
-    removeFile(0) // Clear files after sending
-  }, [input, files, actions, removeFile])
+  }, [input, files, actions, clearFiles])
 
   return (
     <div className="flex flex-col gap-2">
@@ -55,7 +63,7 @@ export function ChatInput() {
               {file.type.startsWith("image/") ? (
                 <div className="relative w-5 h-5 rounded-full overflow-hidden">
                   <Image
-                    src={URL.createObjectURL(file) || "/placeholder.svg"}
+                    src={file.preview || URL.createObjectURL(file) || "/placeholder.svg"}
                     alt={file.name}
                     fill
                     className="object-cover"

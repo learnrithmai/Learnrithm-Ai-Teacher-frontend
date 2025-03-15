@@ -1,15 +1,10 @@
 "use client"
 
 import { Input } from "@/components/ui/input"
-
 import { AvatarFallback } from "@/components/ui/avatar"
-
 import { AvatarImage } from "@/components/ui/avatar"
-
 import { Avatar } from "@/components/ui/avatar"
-
 import { ScrollArea } from "@/components/ui/scroll-area"
-
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,9 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-
 import { Button } from "@/components/ui/button"
-
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -53,6 +46,7 @@ import {
   Mic,
   ClipboardCheck,
   Microscope,
+  Menu,
 } from "lucide-react"
 import Image from "next/image"
 import React from "react"
@@ -72,6 +66,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/command"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 
 const SidebarContext = React.createContext<{
   sidebarOpen: boolean
@@ -90,9 +85,6 @@ function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(true)
   return <SidebarContext.Provider value={{ sidebarOpen, setSidebarOpen }}>{children}</SidebarContext.Provider>
 }
-
-// Previous imports remain the same...
-// Keep all the previous imports from the last version
 
 const FloatingIcon = ({ icon: Icon, initialX, initialY, duration }: any) => {
   return (
@@ -127,11 +119,29 @@ export default function ChatUI() {
 function ChatUIContent() {
   const { sidebarOpen, setSidebarOpen } = useSidebar()
   const [chatState, chatActions] = useChatState()
-  const { files, error: fileError, addFiles, removeFile, clearFiles } = useFileUpload()
+  const { files, addFiles, removeFile, clearFiles } = useFileUpload()
   const [darkMode, setDarkMode] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState("")
   const [activePill, setActivePill] = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if the screen is mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    // Initial check
+    checkIfMobile()
+
+    // Add event listener for window resize
+    window.addEventListener("resize", checkIfMobile)
+
+    // Cleanup
+    return () => window.removeEventListener("resize", checkIfMobile)
+  }, [])
 
   // Cleanup effect
   React.useEffect(() => {
@@ -205,13 +215,16 @@ function ChatUIContent() {
     [chatState.currentChat, chatActions],
   )
 
-  const handleFileSelect = React.useCallback(
-    (files: File[]) => {
-      setShowUpload(false)
-      handleSendMessage("", files)
-    },
-    [handleSendMessage],
-  )
+  const [showUpload, setShowUpload] = useState(false)
+  const [input, setInput] = useState("")
+  const [showWelcome, setShowWelcome] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcome(false)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [])
 
   const floatingIcons = [
     { icon: BookOpen, x: "10%", y: "20%", duration: 8 },
@@ -224,32 +237,170 @@ function ChatUIContent() {
     { icon: Calculator, x: "20%", y: "85%", duration: 8 },
   ]
 
-  const [showWelcome, setShowWelcome] = useState(true)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowWelcome(false)
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  const [input, setInput] = useState("")
-  const [showUpload, setShowUpload] = useState(false)
-
-  const togglePin = (chatId: string) => {
-    //Implementation for togglePin
-  }
-
-  const deleteChat = (chatId: string) => {
-    //Implementation for deleteChat
-  }
-
   const reasons = [
     { value: "general", label: "General Chat" },
     { value: "academic", label: "Academic Writing" },
     { value: "creative", label: "Creative Writing" },
     { value: "research", label: "Research" },
   ]
+
+  // Render the sidebar content
+  const renderSidebarContent = () => (
+    <div className="flex flex-col h-full w-full">
+      <div className="p-4 border-b">
+        <div className="flex items-center gap-2 mb-4">
+          <Image src="/images/Logomark.png" alt="Learnrithm AI Logo" width={32} height={32} />
+          <span className="font-semibold text-xl">Learnrithm AI</span>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search chats..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1 px-2">
+        <div className="p-2">
+          <Button
+            className="w-full justify-start gap-2"
+            onClick={() => {
+              chatActions.createChat("New Chat")
+              if (isMobile) setMobileMenuOpen(false)
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            New Chat
+          </Button>
+        </div>
+
+        {/* Pinned Chats */}
+        <div className="px-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Pinned Chats</h3>
+          {chatState.chats
+            .filter((chat) => chat.pinned)
+            .map((chat) => (
+              <div
+                key={chat.id}
+                className={cn(
+                  "flex items-center justify-between p-2 rounded-lg cursor-pointer group",
+                  chatState.selectedChat === chat.id ? "bg-accent" : "hover:bg-accent/50",
+                )}
+                onClick={() => {
+                  chatActions.setSelectedChat(chat.id)
+                  if (isMobile) setMobileMenuOpen(false)
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="text-sm truncate">{chat.name}</span>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      chatActions.togglePin(chat.id)
+                    }}
+                  >
+                    <Pin className="h-3 w-3 fill-current" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      chatActions.deleteChat(chat.id)
+                    }}
+                  >
+                    <Trash className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {/* Recent Chats */}
+        <div className="px-2 mt-4">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Recent Chats</h3>
+          {chatState.chats
+            .filter((chat) => !chat.pinned)
+            .map((chat) => (
+              <div
+                key={chat.id}
+                className={cn(
+                  "flex items-center justify-between p-2 rounded-lg cursor-pointer group",
+                  chatState.selectedChat === chat.id ? "bg-accent" : "hover:bg-accent/50",
+                )}
+                onClick={() => {
+                  chatActions.setSelectedChat(chat.id)
+                  if (isMobile) setMobileMenuOpen(false)
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="text-sm truncate">{chat.name}</span>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      chatActions.togglePin(chat.id)
+                    }}
+                  >
+                    <Pin className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      chatActions.deleteChat(chat.id)
+                    }}
+                  >
+                    <Trash className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+        </div>
+      </ScrollArea>
+
+      <div className="p-4 border-t space-y-2">
+        <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setDarkMode(!darkMode)}>
+          {darkMode ? (
+            <>
+              <Sun className="h-4 w-4" />
+              Light Mode
+            </>
+          ) : (
+            <>
+              <Moon className="h-4 w-4" />
+              Dark Mode
+            </>
+          )}
+        </Button>
+        <Button variant="ghost" className="w-full justify-start gap-2">
+          <HelpCircle className="h-4 w-4" />
+          Help & FAQ
+        </Button>
+        <Button variant="ghost" className="w-full justify-start gap-2">
+          <LogOut className="h-4 w-4" />
+          Log out
+        </Button>
+      </div>
+    </div>
+  )
 
   return (
     <div className={cn("h-screen flex relative overflow-hidden", darkMode && "dark")}>
@@ -270,7 +421,7 @@ function ChatUIContent() {
               className="flex items-center gap-4"
             >
               <GraduationCap className="h-12 w-12 text-primary" />
-              <h1 className="text-4xl font-bold text-primary">EduChat AI</h1>
+              <h1 className="text-4xl font-bold text-primary">Learnrithm Ai</h1>
             </motion.div>
           </motion.div>
         )}
@@ -283,6 +434,13 @@ function ChatUIContent() {
         ))}
       </div>
 
+      {/* Mobile Sidebar (Sheet) */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="p-0 w-[280px] sm:w-[320px]">
+          {renderSidebarContent()}
+        </SheetContent>
+      </Sheet>
+
       {/* Desktop Sidebar */}
       <motion.div
         className={cn(
@@ -292,151 +450,10 @@ function ChatUIContent() {
         initial={false}
         animate={{ width: sidebarOpen ? 300 : 0 }}
       >
-        <div className="flex flex-col h-full w-full">
-          <div className="p-4 border-b">
-            <div className="flex items-center gap-2 mb-4">
-              <Image src="/images/Logomark.png" alt="Learnrithm AI Logo" width={32} height={32} />
-              <span className="font-semibold text-xl">Learnrithm AI</span>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search chats..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1 px-2">
-            <div className="p-2">
-              <Button className="w-full justify-start gap-2" onClick={() => chatActions.createChat("New Chat")}>
-                <Plus className="h-4 w-4" />
-                New Chat
-              </Button>
-            </div>
-
-            {/* Pinned Chats */}
-            <div className="px-2">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Pinned Chats</h3>
-              {chatState.chats
-                .filter((chat) => chat.pinned)
-                .map((chat) => (
-                  <div
-                    key={chat.id}
-                    className={cn(
-                      "flex items-center justify-between p-2 rounded-lg cursor-pointer group",
-                      chatState.selectedChat === chat.id ? "bg-accent" : "hover:bg-accent/50",
-                    )}
-                    onClick={() => chatActions.setSelectedChat(chat.id)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="text-sm truncate">{chat.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          chatActions.togglePin(chat.id)
-                        }}
-                      >
-                        <Pin className="h-3 w-3 fill-current" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          chatActions.deleteChat(chat.id)
-                        }}
-                      >
-                        <Trash className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            {/* Recent Chats */}
-            <div className="px-2 mt-4">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Recent Chats</h3>
-              {chatState.chats
-                .filter((chat) => !chat.pinned)
-                .map((chat) => (
-                  <div
-                    key={chat.id}
-                    className={cn(
-                      "flex items-center justify-between p-2 rounded-lg cursor-pointer group",
-                      chatState.selectedChat === chat.id ? "bg-accent" : "hover:bg-accent/50",
-                    )}
-                    onClick={() => chatActions.setSelectedChat(chat.id)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="text-sm truncate">{chat.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          chatActions.togglePin(chat.id)
-                        }}
-                      >
-                        <Pin className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          chatActions.deleteChat(chat.id)
-                        }}
-                      >
-                        <Trash className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </ScrollArea>
-
-          <div className="p-4 border-t space-y-2">
-            <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setDarkMode(!darkMode)}>
-              {darkMode ? (
-                <>
-                  <Sun className="h-4 w-4" />
-                  Light Mode
-                </>
-              ) : (
-                <>
-                  <Moon className="h-4 w-4" />
-                  Dark Mode
-                </>
-              )}
-            </Button>
-            <Button variant="ghost" className="w-full justify-start gap-2">
-              <HelpCircle className="h-4 w-4" />
-              Help & FAQ
-            </Button>
-            <Button variant="ghost" className="w-full justify-start gap-2">
-              <LogOut className="h-4 w-4" />
-              Log out
-            </Button>
-          </div>
-        </div>
+        {renderSidebarContent()}
       </motion.div>
 
-      {/* Toggle Sidebar Button with Animation */}
+      {/* Toggle Sidebar Button with Animation (Desktop) */}
       <motion.div
         className="hidden md:block absolute z-20"
         initial={false}
@@ -458,6 +475,11 @@ function ChatUIContent() {
           transition={{ duration: 0.5 }}
         >
           <div className="flex items-center gap-2">
+            {/* Mobile menu button */}
+            <Button variant="ghost" size="icon" className="md:hidden mr-2" onClick={() => setMobileMenuOpen(true)}>
+              <Menu className="h-5 w-5" />
+            </Button>
+
             <motion.div
               animate={{ rotate: [0, 360] }}
               transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
@@ -621,171 +643,177 @@ function ChatUIContent() {
                 }}
                 className="rounded-2xl border-0 bg-background shadow-none text-base px-4 py-3 focus-visible:ring-0"
               />
-              <div className="relative flex items-center">
-                <div className="flex gap-2">
-                  <Popover open={showUpload} onOpenChange={() => setShowUpload(!showUpload)}>
-                    <PopoverTrigger>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        <span>Add</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-3">
-                      <div className="space-y-4">
-                        <div className="font-medium text-sm">Upload Files</div>
-                        <div className="grid gap-2">
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">Documents (.pdf, .doc, .txt)</span>
-                          </div>
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                            <Image
-                              className="h-4 w-4 text-muted-foreground"
-                              src="/placeholder.svg"
-                              alt="Image Preview"
-                              width={16}
-                              height={16}
+
+              {/* Scrollable pills container */}
+              <div className="relative">
+                <div className="flex items-center">
+                  <div className="flex-1 overflow-x-auto no-scrollbar">
+                    <div className="flex gap-2 pb-2">
+                      <Popover open={showUpload} onOpenChange={() => setShowUpload(!showUpload)}>
+                        <PopoverTrigger>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground flex-shrink-0"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            <span>Add</span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-3">
+                          <div className="space-y-4">
+                            <div className="font-medium text-sm">Upload Files</div>
+                            <div className="grid gap-2">
+                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">Documents (.pdf, .doc, .txt)</span>
+                              </div>
+                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                <Image
+                                  className="h-4 w-4 text-muted-foreground"
+                                  src="/placeholder.svg"
+                                  alt="Image Preview"
+                                  width={16}
+                                  height={16}
+                                />
+                                <span className="text-sm text-muted-foreground">Images (.jpg, .png, .gif)</span>
+                              </div>
+                            </div>
+                            <FileUpload
+                              onFileSelect={(files) => {
+                                handleSendMessage("", files)
+                              }}
                             />
-                            <span className="text-sm text-muted-foreground">Images (.jpg, .png, .gif)</span>
                           </div>
-                        </div>
-                        <FileUpload
-                          onFileSelect={(files) => {
-                            handleSendMessage("", files)
-                          }}
-                        />
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                        </PopoverContent>
+                      </Popover>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors",
-                      activePill === "study" &&
-                        "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
-                    )}
-                    onClick={() => setActivePill(activePill === "study" ? null : "study")}
-                  >
-                    <BookOpen className="h-3 w-3 mr-1" />
-                    <span>Study Mode</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors",
-                      activePill === "quiz" &&
-                        "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
-                    )}
-                    onClick={() => setActivePill(activePill === "quiz" ? null : "quiz")}
-                  >
-                    <ClipboardCheck className="h-3 w-3 mr-1" />
-                    <span>Quiz</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors",
-                      activePill === "research" &&
-                        "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
-                    )}
-                    onClick={() => setActivePill(activePill === "research" ? null : "research")}
-                  >
-                    <Microscope className="h-3 w-3 mr-1" />
-                    <span>Research</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors",
-                      activePill === "debug" &&
-                        "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
-                    )}
-                    onClick={() => setActivePill(activePill === "debug" ? null : "debug")}
-                  >
-                    <Code className="h-3 w-3 mr-1" />
-                    <span>Code Debugger</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors",
-                      activePill === "homework" &&
-                        "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
-                    )}
-                    onClick={() => setActivePill(activePill === "homework" ? null : "homework")}
-                  >
-                    <PenTool className="h-3 w-3 mr-1" />
-                    <span>Homework Helper</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors",
-                      activePill === "think" &&
-                        "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
-                    )}
-                    onClick={() => setActivePill(activePill === "think" ? null : "think")}
-                  >
-                    <Brain className="h-3 w-3 mr-1" />
-                    <span>Think</span>
-                  </Button>
-
-                  <Popover open={showUpload} onOpenChange={setShowUpload}>
-                    <PopoverTrigger>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                        className={cn(
+                          "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
+                          activePill === "study" &&
+                            "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+                        )}
+                        onClick={() => setActivePill(activePill === "study" ? null : "study")}
                       >
-                        <MapPin className="h-3 w-3 mr-1" />
-                        <span>Reason</span>
+                        <BookOpen className="h-3 w-3 mr-1" />
+                        <span>Study Mode</span>
                       </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-48 p-0">
-                      <Command>
-                        <CommandInputComponent placeholder="Select reason..." />
-                        <CommandList>
-                          <CommandEmpty>No reason found.</CommandEmpty>
-                          <CommandGroup>
-                            {reasons.map((reason) => (
-                              <CommandItem
-                                key={reason.value}
-                                value={reason.value}
-                                onSelect={() => {
-                                  // Handle reason selection
-                                }}
-                              >
-                                {reason.label}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
 
-                <div className="absolute right-0">
-                  <Button size="icon" className="rounded-full w-8 h-8 bg-black text-white hover:bg-black/90">
-                    <Mic className="h-4 w-4" />
-                    <span className="sr-only">Voice input</span>
-                  </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
+                          activePill === "quiz" &&
+                            "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+                        )}
+                        onClick={() => setActivePill(activePill === "quiz" ? null : "quiz")}
+                      >
+                        <ClipboardCheck className="h-3 w-3 mr-1" />
+                        <span>Quiz</span>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
+                          activePill === "research" &&
+                            "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+                        )}
+                        onClick={() => setActivePill(activePill === "research" ? null : "research")}
+                      >
+                        <Microscope className="h-3 w-3 mr-1" />
+                        <span>Research</span>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
+                          activePill === "debug" &&
+                            "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+                        )}
+                        onClick={() => setActivePill(activePill === "debug" ? null : "debug")}
+                      >
+                        <Code className="h-3 w-3 mr-1" />
+                        <span>Code Debugger</span>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
+                          activePill === "homework" &&
+                            "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+                        )}
+                        onClick={() => setActivePill(activePill === "homework" ? null : "homework")}
+                      >
+                        <PenTool className="h-3 w-3 mr-1" />
+                        <span>Homework Helper</span>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
+                          activePill === "think" &&
+                            "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+                        )}
+                        onClick={() => setActivePill(activePill === "think" ? null : "think")}
+                      >
+                        <Brain className="h-3 w-3 mr-1" />
+                        <span>Think</span>
+                      </Button>
+
+                      <Popover open={showUpload} onOpenChange={setShowUpload}>
+                        <PopoverTrigger>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground flex-shrink-0"
+                          >
+                            <MapPin className="h-3 w-3 mr-1" />
+                            <span>Reason</span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-0">
+                          <Command>
+                            <CommandInputComponent placeholder="Select reason..." />
+                            <CommandList>
+                              <CommandEmpty>No reason found.</CommandEmpty>
+                              <CommandGroup>
+                                {reasons.map((reason) => (
+                                  <CommandItem
+                                    key={reason.value}
+                                    value={reason.value}
+                                    onSelect={() => {
+                                      // Handle reason selection
+                                    }}
+                                  >
+                                    {reason.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <div className="ml-2 flex-shrink-0">
+                    <Button size="icon" className="rounded-full w-8 h-8 bg-black text-white hover:bg-black/90">
+                      <Mic className="h-4 w-4" />
+                      <span className="sr-only">Voice input</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -797,7 +825,6 @@ function ChatUIContent() {
 }
 
 // Keep the Sidebar and ChatItem components from the previous version...
-// Copy the Sidebar and ChatItem component code from the previous version
 interface Chat {
   id: string
   name: string
@@ -812,27 +839,6 @@ interface Message {
   file?: File
 }
 
-function Sidebar({
-  chats,
-  selectedChat,
-  setSelectedChat,
-  togglePin,
-  deleteChat,
-  darkMode,
-  setDarkMode,
-}: {
-  chats: Chat[]
-  selectedChat: string | null
-  setSelectedChat: (id: string) => void
-  togglePin: (id: string) => void
-  deleteChat: (id: string) => void
-  darkMode: boolean
-  setDarkMode: (dark: boolean) => void
-}) {
-  const { sidebarOpen } = useSidebar()
-  // Rest of the Sidebar component code...
-}
-
 function ChatInput({ onSend, isLoading }: { onSend: (message: string, files?: File[]) => void; isLoading: boolean }) {
   const [input, setInput] = useState("")
   const [files, setFiles] = useState<File[]>([])
@@ -842,7 +848,10 @@ function ChatInput({ onSend, isLoading }: { onSend: (message: string, files?: Fi
 
   return (
     <div className="flex items-center gap-2">
-      <FileUpload onFileSelect={(files) => handleFileSelect(files as unknown as FileList)} className="rounded-lg border bg-background p-4" />
+      <FileUpload
+        onFileSelect={(files) => handleFileSelect(files as unknown as FileList)}
+        className="rounded-lg border bg-background p-4"
+      />
       <Input
         placeholder="Ask anything about learning..."
         value={input}

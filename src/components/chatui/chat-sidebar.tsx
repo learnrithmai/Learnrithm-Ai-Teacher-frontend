@@ -22,6 +22,11 @@ export function ChatSidebar({ darkMode, setDarkMode }: ChatSidebarProps) {
   const { sidebarOpen } = useSidebar()
   const [searchTerm, setSearchTerm] = React.useState("")
 
+  // Ensure state.chats exists before filtering
+  const pinnedChats = React.useMemo(() => state.chats?.filter((chat) => chat.pinned) || [], [state.chats])
+
+  const unpinnedChats = React.useMemo(() => state.chats?.filter((chat) => !chat.pinned) || [], [state.chats])
+
   return (
     <motion.div
       className={cn(
@@ -59,93 +64,89 @@ export function ChatSidebar({ darkMode, setDarkMode }: ChatSidebarProps) {
           {/* Pinned Chats */}
           <div className="px-2">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">Pinned Chats</h3>
-            {state.chats
-              .filter((chat) => chat.pinned)
-              .map((chat) => (
-                <div
-                  key={chat.id}
-                  className={cn(
-                    "flex items-center justify-between p-2 rounded-lg cursor-pointer group",
-                    state.selectedChat === chat.id ? "bg-accent" : "hover:bg-accent/50",
-                  )}
-                  onClick={() => actions.setSelectedChat(chat.id)}
-                >
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="text-sm truncate">{chat.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        actions.togglePin(chat.id)
-                      }}
-                    >
-                      <Pin className="h-3 w-3 fill-current" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        actions.deleteChat(chat.id)
-                      }}
-                    >
-                      <Trash className="h-3 w-3" />
-                    </Button>
-                  </div>
+            {pinnedChats.map((chat) => (
+              <div
+                key={chat.id}
+                className={cn(
+                  "flex items-center justify-between p-2 rounded-lg cursor-pointer group",
+                  state.selectedChat === chat.id ? "bg-accent" : "hover:bg-accent/50",
+                )}
+                onClick={() => actions.setSelectedChat(chat.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="text-sm truncate">{chat.name}</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      actions.togglePin(chat.id)
+                    }}
+                  >
+                    <Pin className="h-3 w-3 fill-current" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      actions.deleteChat(chat.id)
+                    }}
+                  >
+                    <Trash className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Recent Chats */}
           <div className="px-2 mt-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">Recent Chats</h3>
-            {state.chats
-              .filter((chat) => !chat.pinned)
-              .map((chat) => (
-                <div
-                  key={chat.id}
-                  className={cn(
-                    "flex items-center justify-between p-2 rounded-lg cursor-pointer group",
-                    state.selectedChat === chat.id ? "bg-accent" : "hover:bg-accent/50",
-                  )}
-                  onClick={() => actions.setSelectedChat(chat.id)}
-                >
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="text-sm truncate">{chat.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        actions.togglePin(chat.id)
-                      }}
-                    >
-                      <Pin className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        actions.deleteChat(chat.id)
-                      }}
-                    >
-                      <Trash className="h-3 w-3" />
-                    </Button>
-                  </div>
+            {unpinnedChats.map((chat) => (
+              <div
+                key={chat.id}
+                className={cn(
+                  "flex items-center justify-between p-2 rounded-lg cursor-pointer group",
+                  state.selectedChat === chat.id ? "bg-accent" : "hover:bg-accent/50",
+                )}
+                onClick={() => actions.setSelectedChat(chat.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="text-sm truncate">{chat.name}</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      actions.togglePin(chat.id)
+                    }}
+                  >
+                    <Pin className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      actions.deleteChat(chat.id)
+                    }}
+                  >
+                    <Trash className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </ScrollArea>
 

@@ -1,126 +1,171 @@
-"use client"
-
 import * as React from "react"
+import type { ChatState, Message, Chat } from "@/types"
 
-interface Message {
-  id: string
-  role: "user" | "assistant"
-  content: string
-  file?: File
-}
+// Simple ID generator function
+const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-interface Chat {
-  id: string
-  name: string
-  messages: Message[]
-  pinned: boolean
-}
-
-interface ChatState {
-  chats: Chat[]
-  currentChat: Chat | null
-  selectedChat: string | null
-}
-
-export function useChatState(initialState: Partial<ChatState> = {}) {
-  const [state, setState] = React.useState<ChatState>(() => ({
-    chats: [],
+export function useChatState() {
+  const [state, setState] = React.useState<ChatState>({
+    chats: [
+      { 
+        id: "1", 
+        name: "New Chat", 
+        pinned: false, 
+        messages: [] 
+      }
+    ],
+    selectedChat: "1",
     currentChat: null,
-    selectedChat: null,
-    ...initialState,
-  }))
+  });
 
-  const actions = React.useMemo(
-    () => ({
-      setCurrentChat: (chat: Chat | null) => {
-        setState((prev) => {
-          if (prev.currentChat?.id === chat?.id) return prev
-          return { ...prev, currentChat: chat }
-        })
-      },
+  React.useEffect(() => {
+    // Make sure currentChat is always set to the selected chat
+    const current = state.chats.find(chat => chat.id === state.selectedChat);
+    if (current && state.currentChat !== current) {
+      setState(prev => ({ ...prev, currentChat: current }));
+    }
+  }, [state.selectedChat, state.chats]);
 
-      setSelectedChat: (id: string | null) => {
-        setState((prev) => {
-          if (prev.selectedChat === id) return prev
-          const chat = prev.chats.find((c) => c.id === id) || null
-          return {
-            ...prev,
-            selectedChat: id,
-            currentChat: chat,
-          }
-        })
-      },
+  const actions = React.useMemo(() => ({
+    createChat: (name: string) => {
+      const id = generateId();
+      setState(prevState => {
+        const newChat = { id, name, pinned: false, messages: [] }
+        return {
+          ...prevState,
+          chats: [...prevState.chats, newChat],
+          selectedChat: id,
+          currentChat: newChat
+        }
+      })
+    },
 
-      addMessage: (message: Omit<Message, "id">) => {
-        setState((prev) => {
-          if (!prev.currentChat) return prev
+    // Rest of action functions with same implementation but using generateId() instead of uuidv4()
+    
+    addMessage: (message: Omit<Message, "id">) => {
+      setState(prevState => {
+        // Find the current chat
+        const chatIndex = prevState.chats.findIndex(c => c.id === prevState.selectedChat);
+        
+        if (chatIndex === -1) return prevState;
+        
+        // Create a new message with ID
+        const newMessage = {
+          id: generateId(),
+          ...message,
+        };
+        
+        // Create a new array of chats with the updated messages
+        const updatedChats = [...prevState.chats];
+        updatedChats[chatIndex] = {
+          ...updatedChats[chatIndex],
+          messages: [...updatedChats[chatIndex].messages, newMessage]
+        };
+        
+        // Update the current chat reference
+        const updatedCurrentChat = updatedChats[chatIndex];
+        
+        return {
+          ...prevState,
+          chats: updatedChats,
+          currentChat: updatedCurrentChat
+        };
+      });
+    },
 
-          const newMessage = {
-            ...message,
-            id: Math.random().toString(),
-          }
+    // Include all other actions...
+    deleteChat: (id: string) => {
+      setState(prevState => {
+        const filteredChats = prevState.chats.filter(chat => chat.id !== id)
+        
+        // If we're deleting the selected chat, select another one
+        let newSelectedId = prevState.selectedChat
+        if (id === prevState.selectedChat) {
+          newSelectedId = filteredChats.length > 0 ? filteredChats[0].id : ""
+        }
+        
+        const newCurrentChat = filteredChats.find(chat => chat.id === newSelectedId) || null
+        
+        return {
+          ...prevState,
+          chats: filteredChats,
+          selectedChat: newSelectedId,
+          currentChat: newCurrentChat
+        }
+      })
+    },
 
-          const updatedChat = {
-            ...prev.currentChat,
-            messages: [...prev.currentChat.messages, newMessage],
-          }
+    renameChat: (id: string, name: string) => {
+      setState(prevState => {
+        const updatedChats = prevState.chats.map(chat => 
+          chat.id === id ? { ...chat, name } : chat
+        )
+        
+        // Update currentChat if it's the one being renamed
+        const updatedCurrentChat = 
+          prevState.currentChat?.id === id 
+            ? { ...prevState.currentChat, name } 
+            : prevState.currentChat
+        
+        return {
+          ...prevState,
+          chats: updatedChats,
+          currentChat: updatedCurrentChat
+        }
+      })
+    },
 
-          return {
-            ...prev,
-            chats: prev.chats.map((chat) => (chat.id === updatedChat.id ? updatedChat : chat)),
-            currentChat: updatedChat,
-          }
-        })
-      },
+    setSelectedChat: (id: string) => {
+      setState(prevState => {
+        const selectedChat = prevState.chats.find(chat => chat.id === id) || null
+        return {
+          ...prevState,
+          selectedChat: id,
+          currentChat: selectedChat
+        }
+      })
+    },
 
-      createChat: (name: string) => {
-        setState((prev) => {
-          const existingChat = prev.chats.find((chat) => chat.name === name)
-          if (existingChat) {
-            return {
-              ...prev,
-              currentChat: existingChat,
-              selectedChat: existingChat.id,
-            }
-          }
+    togglePin: (id: string) => {
+      setState(prevState => {
+        const updatedChats = prevState.chats.map(chat => 
+          chat.id === id ? { ...chat, pinned: !chat.pinned } : chat
+        )
+        
+        // Update currentChat if it's the one being toggled
+        const updatedCurrentChat = 
+          prevState.currentChat?.id === id 
+            ? { ...prevState.currentChat, pinned: !prevState.currentChat.pinned } 
+            : prevState.currentChat
+        
+        return {
+          ...prevState,
+          chats: updatedChats,
+          currentChat: updatedCurrentChat
+        }
+      })
+    },
 
-          const newChat: Chat = {
-            id: Math.random().toString(),
-            name,
-            messages: [],
-            pinned: false,
-          }
-          return {
-            ...prev,
-            chats: [...prev.chats, newChat],
-            currentChat: newChat,
-            selectedChat: newChat.id,
-          }
-        })
-      },
+    clearMessages: (chatId: string) => {
+      setState(prevState => {
+        const updatedChats = prevState.chats.map(chat => 
+          chat.id === chatId ? { ...chat, messages: [] } : chat
+        )
+        
+        // Update currentChat if it's the one being cleared
+        const updatedCurrentChat = 
+          prevState.currentChat?.id === chatId 
+            ? { ...prevState.currentChat, messages: [] } 
+            : prevState.currentChat
+        
+        return {
+          ...prevState,
+          chats: updatedChats,
+          currentChat: updatedCurrentChat
+        }
+      })
+    },
+  }), []);
 
-      togglePin: (id: string) => {
-        setState((prev) => ({
-          ...prev,
-          chats: prev.chats.map((chat) => (chat.id === id ? { ...chat, pinned: !chat.pinned } : chat)),
-        }))
-      },
-
-      deleteChat: (id: string) => {
-        setState((prev) => {
-          const updatedChats = prev.chats.filter((chat) => chat.id !== id)
-          return {
-            ...prev,
-            chats: updatedChats,
-            currentChat: prev.currentChat?.id === id ? null : prev.currentChat,
-            selectedChat: prev.selectedChat === id ? null : prev.selectedChat,
-          }
-        })
-      },
-    }),
-    [],
-  )
-
-  return [state, actions] as const
+  return [state, actions] as const;
 }
-

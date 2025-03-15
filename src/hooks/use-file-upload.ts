@@ -1,105 +1,90 @@
-"use client"
+import { useState, useCallback } from 'react';
 
-import * as React from "react"
-
-interface UseFileUploadOptions {
-  maxSize?: number
-  maxFiles?: number
-  acceptedTypes?: string[]
+/**
+ * Extends the File interface to include an optional preview URL
+ */
+export interface FileWithPreview extends File {
+  preview?: string;
 }
 
-interface FileWithPreview extends File {
-  preview?: string
+/**
+ * Return type for the useFileUpload hook
+ */
+export interface UseFileUploadReturn {
+  files: FileWithPreview[];
+  addFiles: (newFiles: FileWithPreview[]) => void;
+  removeFile: (index: number) => void;
+  clearFiles: () => void;
 }
 
-export function useFileUpload({
-  maxSize = 5 * 1024 * 1024,
-  maxFiles = 10,
-  acceptedTypes = ["image/*", "application/pdf"],
-}: UseFileUploadOptions = {}) {
-  const [files, setFiles] = React.useState<FileWithPreview[]>([])
-  const [error, setError] = React.useState<string | null>(null)
+/**
+ * Hook for managing file uploads with preview functionality
+ */
+export function useFileUpload(): UseFileUploadReturn {
+  const [files, setFiles] = useState<FileWithPreview[]>([]);
 
-  const cleanup = React.useCallback(() => {
-    files.forEach((file) => {
-      if (file.preview) {
-        URL.revokeObjectURL(file.preview)
+  /**
+   * Add new files to the file list
+   */
+  const addFiles = useCallback((newFiles: FileWithPreview[]): void => {
+    // Create preview URLs for the files that don't have them
+    const filesWithPreviews = newFiles.map((file: FileWithPreview) => {
+      if (!file.preview && file.type.startsWith('image/')) {
+        return Object.assign(file, {
+          preview: URL.createObjectURL(file)
+        });
       }
-    })
-  }, [files])
+      return file;
+    });
+    
+    setFiles((prevFiles: FileWithPreview[]) => [...prevFiles, ...filesWithPreviews]);
+  }, []);
 
-  React.useEffect(() => {
-    return () => cleanup()
-  }, [cleanup])
-
-  const validateFile = React.useCallback(
-    (file: File): boolean => {
-      if (file.size > maxSize) {
-        setError(`File size must be less than ${maxSize / 1024 / 1024}MB`)
-        return false
+  /**
+   * Remove a file at the specified index
+   */
+  const removeFile = useCallback((index: number): void => {
+    setFiles((prevFiles: FileWithPreview[]) => {
+      // Check if index is valid
+      if (index < 0 || index >= prevFiles.length) {
+        return prevFiles;
       }
-
-      const isValidType = acceptedTypes.some((type) => {
-        if (type.endsWith("/*")) {
-          const baseType = type.split("/")[0]
-          return file.type.startsWith(`${baseType}/`)
+      
+      const newFiles = [...prevFiles];
+      const fileToRemove = newFiles[index];
+      
+      // Safely revoke the object URL if it exists
+      if (fileToRemove && typeof fileToRemove.preview === 'string') {
+        try {
+          URL.revokeObjectURL(fileToRemove.preview);
+        } catch (error) {
+          console.error('Error revoking object URL:', error);
         }
-        return file.type === type
-      })
-
-      if (!isValidType) {
-        setError(`File type must be one of: ${acceptedTypes.join(", ")}`)
-        return false
       }
-
-      return true
-    },
-    [maxSize, acceptedTypes],
-  )
-
-  const addFiles = React.useCallback(
-    (newFiles: FileList | File[]) => {
-      setError(null)
-
-      const validFiles = Array.from(newFiles)
-        .filter(validateFile)
-        .slice(0, maxFiles - files.length)
-
-      const filesWithPreviews = validFiles.map((file) => {
-        if (file.type.startsWith("image/")) {
-          return Object.assign(file, {
-            preview: URL.createObjectURL(file),
-          })
+      
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+  }, []);
+  
+  /**
+   * Clear all files and revoke their object URLs
+   */
+  const clearFiles = useCallback((): void => {
+    setFiles((prevFiles: FileWithPreview[]) => {
+      // Revoke all object URLs to prevent memory leaks
+      prevFiles.forEach((file: FileWithPreview) => {
+        if (file && typeof file.preview === 'string') {
+          try {
+            URL.revokeObjectURL(file.preview);
+          } catch (error) {
+            console.error('Error revoking object URL:', error);
+          }
         }
-        return file
-      })
+      });
+      return [];
+    });
+  }, []);
 
-      setFiles((prev) => [...prev, ...filesWithPreviews])
-    },
-    [files.length, maxFiles, validateFile],
-  )
-
-  const removeFile = React.useCallback((index: number) => {
-    setFiles((prev) => {
-      const file = prev[index]
-      if (file.preview) {
-        URL.revokeObjectURL(file.preview)
-      }
-      return prev.filter((_, i) => i !== index)
-    })
-  }, [])
-
-  const clearFiles = React.useCallback(() => {
-    cleanup()
-    setFiles([])
-  }, [cleanup])
-
-  return {
-    files,
-    error,
-    addFiles,
-    removeFile,
-    clearFiles,
-  }
+  return { files, addFiles, removeFile, clearFiles };
 }
-
