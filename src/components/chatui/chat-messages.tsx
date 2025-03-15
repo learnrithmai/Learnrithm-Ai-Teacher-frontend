@@ -157,7 +157,8 @@ export function ChatMessages() {
 
   return (
     <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-      <div className="max-w-3xl mx-auto space-y-6">
+      {/* Adjusted container for responsive breakpoints */}
+      <div className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto space-y-6">
         <AnimatePresence>
           {state.currentChat?.messages.map((message, index) => {
             // Debug log for each message
@@ -271,7 +272,7 @@ export function ChatMessages() {
                   // User messages with bubbles (without profile picture)
                   <div className="flex justify-end">
                     <motion.div
-                      className="bg-primary text-primary-foreground rounded-2xl px-5 py-4 max-w-[85%] shadow-sm relative group"
+                      className="bg-primary text-primary-foreground rounded-2xl px-5 py-4 max-w-full sm:max-w-[90%] md:max-w-[80%] shadow-sm relative group"
                       whileHover={{ scale: 1.01 }}
                       transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
@@ -376,4 +377,3 @@ export function ChatMessages() {
     </ScrollArea>
   )
 }
-

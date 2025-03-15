@@ -46,7 +46,8 @@ export const CommandGroup = ({ children, className, ...props }: CommandGroupProp
   </div>
 )
 
-interface CommandItemProps extends React.HTMLAttributes<HTMLLIElement> {
+// Use Omit to avoid the conflict with HTMLAttributes<HTMLLIElement>
+interface CommandItemProps extends Omit<React.HTMLAttributes<HTMLLIElement>, "onSelect"> {
   value: string
   onSelect: (value: string) => void
   children?: React.ReactNode
@@ -111,4 +112,3 @@ export const PopoverTrigger = ({ children, className, ...props }: PopoverTrigger
     {children}
   </button>
 )
-
