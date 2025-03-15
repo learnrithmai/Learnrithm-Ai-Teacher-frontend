@@ -1,25 +1,39 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Plus, Mic, Brain, BookOpen, ClipboardCheck, Microscope, Code, PenTool, X } from "lucide-react"
-import Image from "next/image"
+import * as React from "react";
+import {
+  Plus,
+  Mic,
+  Brain,
+  BookOpen,
+  ClipboardCheck,
+  Microscope,
+  Code,
+  PenTool,
+  X,
+} from "lucide-react";
+import Image from "next/image";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { FileUpload } from "./file-upload"
-import { useFileUpload } from "@/hooks/use-file-upload"
-import { useChat } from "@/components/chatui/chat-provider"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { FileUpload } from "./file-upload";
+import { useFileUpload } from "@/hooks/use-file-upload";
+import { useChat } from "@/components/chatui/chat-provider";
 
 export function ChatInput() {
-  const [input, setInput] = React.useState("")
-  const [activePill, setActivePill] = React.useState<string | null>(null)
-  const { files, addFiles, removeFile } = useFileUpload()
-  const { actions } = useChat()
+  const [input, setInput] = React.useState("");
+  const [activePill, setActivePill] = React.useState<string | null>(null);
+  const { files, addFiles, removeFile } = useFileUpload();
+  const { actions } = useChat();
 
   const handleSend = React.useCallback(() => {
-    if (!input.trim() && files.length === 0) return
+    if (!input.trim() && files.length === 0) return;
 
     if (files.length > 0) {
       files.forEach((file) => {
@@ -27,20 +41,22 @@ export function ChatInput() {
           role: "user",
           content: `Uploaded file: ${file.name}`,
           file,
-        })
-      })
+        });
+      });
     }
 
     if (input.trim()) {
       actions.addMessage({
         role: "user",
         content: input.trim(),
-      })
+      });
     }
 
-    setInput("")
-    removeFile(0) // Clear files after sending
-  }, [input, files, actions, removeFile])
+    console.log("Input:", input);
+
+    setInput("");
+    removeFile(0); // Clear files after sending
+  }, [input, files, actions, removeFile]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -63,10 +79,14 @@ export function ChatInput() {
                 </div>
               ) : (
                 <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xs">{file.name.slice(0, 1).toUpperCase()}</span>
+                  <span className="text-xs">
+                    {file.name.slice(0, 1).toUpperCase()}
+                  </span>
                 </div>
               )}
-              <span className="text-xs max-w-[100px] truncate">{file.name}</span>
+              <span className="text-xs max-w-[100px] truncate">
+                {file.name}
+              </span>
               <Button
                 type="button"
                 variant="ghost"
@@ -89,8 +109,8 @@ export function ChatInput() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
+                e.preventDefault();
+                handleSend();
               }
             }}
             className="rounded-2xl border-0 bg-background shadow-none text-base px-4 py-3 focus-visible:ring-0"
@@ -129,7 +149,8 @@ export function ChatInput() {
           size="sm"
           className={cn(
             "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
-            activePill === "study" && "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+            activePill === "study" &&
+              "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white"
           )}
           onClick={() => setActivePill(activePill === "study" ? null : "study")}
         >
@@ -142,7 +163,8 @@ export function ChatInput() {
           size="sm"
           className={cn(
             "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
-            activePill === "quiz" && "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+            activePill === "quiz" &&
+              "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white"
           )}
           onClick={() => setActivePill(activePill === "quiz" ? null : "quiz")}
         >
@@ -155,9 +177,12 @@ export function ChatInput() {
           size="sm"
           className={cn(
             "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
-            activePill === "research" && "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+            activePill === "research" &&
+              "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white"
           )}
-          onClick={() => setActivePill(activePill === "research" ? null : "research")}
+          onClick={() =>
+            setActivePill(activePill === "research" ? null : "research")
+          }
         >
           <Microscope className="h-3 w-3 mr-1" />
           <span>Research</span>
@@ -168,7 +193,8 @@ export function ChatInput() {
           size="sm"
           className={cn(
             "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
-            activePill === "debug" && "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+            activePill === "debug" &&
+              "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white"
           )}
           onClick={() => setActivePill(activePill === "debug" ? null : "debug")}
         >
@@ -181,9 +207,12 @@ export function ChatInput() {
           size="sm"
           className={cn(
             "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
-            activePill === "homework" && "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+            activePill === "homework" &&
+              "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white"
           )}
-          onClick={() => setActivePill(activePill === "homework" ? null : "homework")}
+          onClick={() =>
+            setActivePill(activePill === "homework" ? null : "homework")
+          }
         >
           <PenTool className="h-3 w-3 mr-1" />
           <span>Homework Helper</span>
@@ -194,7 +223,8 @@ export function ChatInput() {
           size="sm"
           className={cn(
             "rounded-full h-8 px-3 text-xs font-normal border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0",
-            activePill === "think" && "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+            activePill === "think" &&
+              "bg-[#1877F2] text-white border-[#1877F2] hover:bg-[#1877F2] hover:text-white"
           )}
           onClick={() => setActivePill(activePill === "think" ? null : "think")}
         >
@@ -203,6 +233,5 @@ export function ChatInput() {
         </Button>
       </div>
     </div>
-  )
+  );
 }
-
