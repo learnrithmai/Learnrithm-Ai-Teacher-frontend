@@ -32,7 +32,7 @@ export function ChatInput() {
   const { files, addFiles, removeFile } = useFileUpload();
   const { actions } = useChat();
 
-  const handleSend = React.useCallback(() => {
+  const handleSend = React.useCallback(async () => {
     if (!input.trim() && files.length === 0) return;
 
     if (files.length > 0) {

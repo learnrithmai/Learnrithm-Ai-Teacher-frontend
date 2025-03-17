@@ -1,20 +1,30 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Settings, ChevronLeft, ChevronRight, GraduationCap } from "lucide-react"
+import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useSidebar } from "@/components/chatui/sidebar-provider"
-import { ChatSidebar } from "@/components/chatui/chat-sidebar"
-import { ChatMessages } from "@/components/chatui/chat-messages"
-import { ChatInput } from "@/components/chatui/chat-input"
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useSidebar } from "@/components/chatui/sidebar-provider";
+import { ChatSidebar } from "@/components/chatui/chat-sidebar";
+import { ChatMessages } from "@/components/chatui/chat-messages";
+import { ChatInput } from "@/components/chatui/chat-input";
 
 export function ChatLayout() {
-  const { sidebarOpen, setSidebarOpen } = useSidebar()
-  const [showWelcome, setShowWelcome] = React.useState(true)
-  const [darkMode, setDarkMode] = React.useState(false)
+  const { sidebarOpen, setSidebarOpen } = useSidebar();
+  const [showWelcome, setShowWelcome] = React.useState(true);
+  const [darkMode, setDarkMode] = React.useState(false);
 
   // Wrap toggle function in useCallback to prevent infinite render loops
   const handleToggleDarkMode = React.useCallback((value: boolean) => {
@@ -23,15 +33,15 @@ export function ChatLayout() {
 
   // Use memoized callback for sidebar toggle to maintain stable function references
   const handleToggleSidebar = React.useCallback(() => {
-    setSidebarOpen(prev => !prev);
+    setSidebarOpen(!sidebarOpen);
   }, [setSidebarOpen]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      setShowWelcome(false)
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [])
+      setShowWelcome(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="h-screen flex relative overflow-hidden">
@@ -68,8 +78,17 @@ export function ChatLayout() {
         animate={{ left: sidebarOpen ? "300px" : "0px" }}
         transition={{ duration: 0.3 }}
       >
-        <Button variant="ghost" size="icon" className="mt-4 ml-4" onClick={handleToggleSidebar}>
-          {sidebarOpen ? <ChevronLeft className="h-6 w-6" /> : <ChevronRight className="h-6 w-6" />}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="mt-4 ml-4"
+          onClick={handleToggleSidebar}
+        >
+          {sidebarOpen ? (
+            <ChevronLeft className="h-6 w-6" />
+          ) : (
+            <ChevronRight className="h-6 w-6" />
+          )}
         </Button>
       </motion.div>
 
@@ -85,7 +104,11 @@ export function ChatLayout() {
           <div className="flex items-center gap-2">
             <motion.div
               animate={{ rotate: [0, 360] }}
-              transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+              transition={{
+                duration: 20,
+                repeat: Number.POSITIVE_INFINITY,
+                ease: "linear",
+              }}
             >
               <GraduationCap className="h-6 w-6 text-primary" />
             </motion.div>
@@ -97,7 +120,11 @@ export function ChatLayout() {
                 <Button variant="ghost" size="icon">
                   <motion.div
                     animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                    transition={{
+                      duration: 20,
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: "linear",
+                    }}
                   >
                     <Settings className="h-5 w-5" />
                   </motion.div>
@@ -106,7 +133,7 @@ export function ChatLayout() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Log out</DropdownMenuItem>
+                <DropdownMenuItem>Log in</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -123,5 +150,5 @@ export function ChatLayout() {
         </div>
       </div>
     </div>
-  )
+  );
 }
