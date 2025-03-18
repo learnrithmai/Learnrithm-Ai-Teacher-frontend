@@ -156,9 +156,9 @@ export function ChatMessages() {
   }
 
   return (
-    <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+    <ScrollArea className="flex-1 p-4 overflow-y-auto" ref={scrollAreaRef}>
       {/* Adjusted container for responsive breakpoints */}
-      <div className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto space-y-6">
+      <div className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto space-y-6 px-2 sm:px-0">
         <AnimatePresence>
           {state.currentChat?.messages.map((message, index) => {
             // Debug log for each message
@@ -174,13 +174,13 @@ export function ChatMessages() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4, delay: index * 0.15 }}
-                className="w-full"
+                className="w-full px-1" // Added px-1 to prevent edge bleeding
               >
                 {displayAsPlainText ? (
                   // System and assistant messages as plain text without bubble
                   <div
                     className={cn(
-                      "text-foreground text-sm max-w-3xl mx-auto py-2 px-4 group relative",
+                      "text-foreground text-sm max-w-[95%] mx-auto py-2 px-4 group relative overflow-x-hidden",
                       message.role === "system" && "italic text-muted-foreground",
                     )}
                   >
@@ -270,9 +270,9 @@ export function ChatMessages() {
                   </div>
                 ) : (
                   // User messages with bubbles (without profile picture)
-                  <div className="flex justify-end">
+                  <div className="flex justify-end w-full"> {/* Added w-full here */}
                     <motion.div
-                      className="bg-primary text-primary-foreground rounded-2xl px-5 py-4 max-w-full sm:max-w-[90%] md:max-w-[80%] shadow-sm relative group"
+                      className="bg-primary text-primary-foreground rounded-2xl px-5 py-4 max-w-[95%] sm:max-w-[90%] md:max-w-[80%] shadow-sm relative group block" /* Added block display */
                       whileHover={{ scale: 1.01 }}
                       transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
