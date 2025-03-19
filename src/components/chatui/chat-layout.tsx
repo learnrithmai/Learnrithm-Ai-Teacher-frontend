@@ -117,7 +117,7 @@ export function ChatLayout() {
 
         {/* Input */}
         <div className="border-t bg-background/95 backdrop-blur-sm">
-          <div className="max-w-3xl mx-auto py-4">
+          <div className="max-w-3xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
             <ChatInput />
           </div>
         </div>

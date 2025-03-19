@@ -67,17 +67,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     },
   })
 
-  // Implement the addMessage action
+  // Implement the addMessage action with explicit role handling
   const addMessage = useCallback((message: Omit<ChatMessage, "id">) => {
     const id = Math.random().toString(36).substring(2, 9) // Simple ID generation
 
+    // Ensure the role is explicitly set
+    const messageWithRole = {
+      ...message,
+      role: message.role || "user", // Default to "user" if no role is specified
+      id
+    }
+    
+    console.log("Adding message with role:", messageWithRole.role)
+    
     setState((prevState) => {
       if (!prevState.currentChat) return prevState
 
-      const updatedMessage = { ...message, id }
       const updatedCurrentChat = {
         ...prevState.currentChat,
-        messages: [...prevState.currentChat.messages, updatedMessage],
+        messages: [...prevState.currentChat.messages, messageWithRole],
       }
 
       // Update the chat in the chats array
@@ -188,4 +196,3 @@ export const useChat = () => {
   }
   return context
 }
-
