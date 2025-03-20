@@ -28,5 +28,5 @@ export interface Message {
   export interface Mode {
     id: string;
     name: string;
-    icon: any;
+    icon: string;
   }

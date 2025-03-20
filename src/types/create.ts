@@ -15,7 +15,7 @@ export interface FormData {
   
   export interface StepProps {
     formData: FormData;
-    updateFormData: (key: keyof FormData, value: any) => void;
+    updateFormData: (key: keyof FormData, value: FormData[keyof FormData]) => void;
     updateLearningMaterials?: (key: keyof FormData['learningMaterials']) => void;
     paidMember: boolean;
     checkPaidMembership: () => boolean;
