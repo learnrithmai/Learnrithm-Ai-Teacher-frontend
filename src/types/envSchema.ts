@@ -49,5 +49,6 @@ export let ENV: Env;
 try {
   ENV = envSchema.parse(process.env);
 } catch (error) {
+  console.log(error)
   handleZodError(error);
 }

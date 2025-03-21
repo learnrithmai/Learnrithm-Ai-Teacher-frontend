@@ -28,3 +28,12 @@ export type LoginSchema = {
 export type ForgotPasswordSchema = {
     email: string,
 };
+
+// ────────────────────────────────────────────────────────────────
+// Reset Password Schema
+// ────────────────────────────────────────────────────────────────
+
+export type resetPasswordSchema = {
+    token: string
+    password: string
+};

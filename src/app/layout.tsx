@@ -1,12 +1,13 @@
-import './globals.css';
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import Providers from "@/components/providers/providers";
+import "./globals.css";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Learnrithm - AI Learning Platform',
-  description: 'Create and manage AI-powered courses',
+  title: "Learnrithm - AI Learning Platform",
+  description: "Create and manage AI-powered courses",
 };
 
 export default function RootLayout({
@@ -16,7 +17,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <Providers>
+        <body className={inter.className}>{children}</body>
+      </Providers>
     </html>
   );
 }

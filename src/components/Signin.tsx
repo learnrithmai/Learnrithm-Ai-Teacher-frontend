@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
@@ -22,8 +21,8 @@ import { Label } from "./ui/label";
 import GoogleButton from "./google-button";
 import { useToast } from "@/hooks/use-toast";
 import { ForgotPasswordSchema, LoginSchema } from "@/types/authSchema";
-import { ENV } from "@/types/envSchema";
 import logger from "@/utils/chalkLogger";
+import { SERVER_API_URL } from "@/lib/consts";
 
 export default function Signin() {
   const { toast } = useToast();
@@ -79,7 +78,7 @@ export default function Signin() {
   const onSubmit: SubmitHandler<LoginSchema> = async (data) => {
     try {
       const { status } = await axios.post(
-        `${ENV.SERVER_API_URL}/auth/login`,
+        `${SERVER_API_URL}/auth/login`,
         data,
         {
           headers: { "Content-Type": "application/json" },
@@ -91,24 +90,42 @@ export default function Signin() {
         setTimeout(() => (window.location.href = "/"), 2000);
       }
     } catch (error) {
-      logger.error("Error signing in", error as string)
+      logger.error("Error signing in", error as string);
       toast({ title: "Error signing in" });
     }
   };
 
   // Submit handler for the forgot password form
-  const onForgotSubmit: SubmitHandler<ForgotPasswordSchema> = async (data) => {
+  const onForgotSubmit: SubmitHandler<ForgotPasswordSchema> = async (
+    dataToSend
+  ) => {
+    const lastSent = localStorage.getItem("lastResetTimestamp");
+    const now = Date.now();
+
+    // Check if a reset link was sent in the last 2 minutes
+    if (lastSent && now - parseInt(lastSent) < 120000) {
+      toast({
+        title: "Please wait 2 minutes before requesting another reset link.",
+      });
+      return;
+    }
+
     try {
-      const { status } = await axios.post(
-        `${ENV.SERVER_API_URL}/auth/forget-password`,
+      const {
+        status,
         data,
-        {
+      }: { status: number; data: { error?: string; message?: string } } =
+        await axios.post(`${SERVER_API_URL}/auth/forgot-password`, dataToSend, {
           headers: { "Content-Type": "application/json" },
-        }
-      );
+        });
+
       if (status === 200) {
-        toast({ title: "Reset link sent successfully" });
-        resetForgotForm(); // Clear the forgot password form
+        toast({ title: data.message });
+        localStorage.setItem("lastResetTimestamp", now.toString());
+        resetForgotForm();
+      } else if (status === 404 && data.error) {
+        forgotErrors.email = { type: "manual", message: data.error };
+        toast({ title: data.error });
       }
     } catch (error) {
       console.error(error);
@@ -193,7 +210,9 @@ export default function Signin() {
                 className="h-12 px-4 bg-gray-50 border-2 border-gray-100 transition-colors focus:border-blue-600 focus:ring-0"
               />
               {errors.password && (
-                <p className="text-red-500 text-sm">{errors.password.message}</p>
+                <p className="text-red-500 text-sm">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
@@ -222,7 +241,7 @@ export default function Signin() {
                   </DialogHeader>
                   {/* Forgot Password Form */}
                   <form onSubmit={handleSubmitForgot(onForgotSubmit)}>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-">
                       <Label htmlFor="forgot-email">Email</Label>
                       <Input
                         id="forgot-email"

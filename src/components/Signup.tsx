@@ -22,8 +22,8 @@ import { useToast } from "@/hooks/use-toast";
 import { redirect } from "next/navigation";
 import GoogleButton from "./google-button";
 import { RegisterUserSchema } from "@/types/authSchema";
-import { ENV } from "@/types/envSchema";
 import logger from "@/utils/chalkLogger";
+import { SERVER_API_URL } from "@/lib/consts";
 
 // Extend the RegisterUserSchema with a confirmPassword field for form validation.
 type FormValues = RegisterUserSchema & {
@@ -93,7 +93,9 @@ export default function Signup() {
         image: data.image,
       };
 
-      const Request_Url = `${ENV.SERVER_API_URL}/user/register`;
+      console.log(dataToSend);
+
+      const Request_Url = `${SERVER_API_URL}/auth/register`;
       const { status } = await axios.post(Request_Url, dataToSend, {
         headers: {
           "Content-Type": "application/json",
@@ -105,7 +107,7 @@ export default function Signup() {
         setTimeout(() => redirect("/"), 2000);
       }
     } catch (error) {
-      logger.error("An error occurred during registration", error as string)
+      logger.error("An error occurred during registration", error as string);
       toast({ title: "An error occurred during registration" });
     }
   };
@@ -204,7 +206,7 @@ export default function Signup() {
                 control={control}
                 rules={{ required: "Country is required" }}
                 render={({ field }) => (
-                  <Select {...field}>
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="h-12 px-4 bg-gray-50 border-2 border-gray-100 transition-colors focus:border-blue-600 focus:ring-0">
                       <SelectValue placeholder="Select your country" />
                     </SelectTrigger>
@@ -213,7 +215,7 @@ export default function Signup() {
                         {countries.map((country) => (
                           <SelectItem
                             key={country}
-                            value={country.toLowerCase().replace(/\s+/g, "-")}
+                            value={country}
                           >
                             {country}
                           </SelectItem>
