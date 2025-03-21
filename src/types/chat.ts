@@ -1,32 +1,43 @@
 export interface Message {
-    id: string;
-    content: string;
-    role: "user" | "assistant";
-    timestamp: Date;
-    files?: FilePreview[];
-    chatId: string;
-  }
-  
-  export interface Chat {
-    id: string;
-    title: string;
-    timestamp: Date;
-    messages: Message[];
-  }
-  
-  export interface FilePreview {
-    id: string;
-    name: string;
-    size: number;
-    type: string;
-  }
-  
-  export interface ChatsByDate {
-    [dateLabel: string]: Chat[];
-  }
-  
-  export interface Mode {
-    id: string;
-    name: string;
-    icon: any;
-  }
+  id: string;
+  content: string;
+  role: "user" | "assistant";
+  timestamp: Date;
+  files?: FilePreview[];
+  chatId: string;
+}
+
+export interface Chat {
+  id: string;
+  title: string;
+  timestamp: Date;
+  messages: Message[];
+}
+
+export interface FilePreview {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+}
+
+export interface ChatsByDate {
+  [dateLabel: string]: Chat[];
+}
+
+export interface Mode {
+  id: string;
+  name: string;
+  icon: any;
+}
+
+export interface FileProcessingRequest {
+  file: File; // The file to be processed
+  mode: string; // The mode in which to process the file (e.g., study, quiz)
+}
+
+export interface FileProcessingResponse {
+  success: boolean;
+  content?: string; // Extracted content from the file
+  error?: string; // Error message if processing failed
+}

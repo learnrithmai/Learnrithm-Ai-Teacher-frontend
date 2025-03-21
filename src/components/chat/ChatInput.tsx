@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +43,7 @@ export function ChatInput({
           ref={fileInputRef} 
           className="hidden" 
           onChange={onFileChange}
+          accept=".pdf,.txt,.docx,image/*"
           multiple
         />
         {filePreview.length > 0 && (
