@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { Select } from "../ui/select"
 
 interface FreeTrialProps {
   startDate: string
@@ -255,13 +256,14 @@ export default function FreeTrial({
 
             <div className="rounded-lg border p-4">
               <h4 className="font-medium mb-2">Why do you need more time?</h4>
-              <select className="w-full p-2 border rounded-md">
-                <option>I haven't had time to fully explore the features</option>
-                <option>I'm still comparing with other solutions</option>
+              <div className="w-full p-2 border rounded-md">
+                <Select>
+                <option>I haven&apos;t had time to fully explore the features</option>
+                <option>I&apos;m still comparing with other solutions</option>
                 <option>I need to get approval from my team</option>
-                <option>I'm waiting for my next payment cycle</option>
-                <option>Other reason</option>
-              </select>
+                <option>I&apos;m waiting for my next payment cycle</option>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -307,3 +309,4 @@ export default function FreeTrial({
     </>
   )
 }
+

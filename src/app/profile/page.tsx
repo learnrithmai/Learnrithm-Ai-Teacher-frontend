@@ -3,21 +3,22 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
-import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { Home, Layout, Compass, Menu, Check, Mail, Clock, Crown, Camera } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Check, Mail, Clock, Crown, Camera } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Sheet, SheetTrigger, SheetContent, SheetHeader } from "@/components/ui/sheet"
 import { ToastProvider, ToastViewport } from "@/components/ui/toast"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+
+import { Input } from "@/components/ui/input"
+import Sidebar from "@/components/side-bar"
 import ProfileComponent from "@/components/profilepage/profile"
 import SubscriptionComponent from "@/components/profilepage/subscription"
 import SettingsComponent from "@/components/profilepage/settings"
 
 export default function ProfilePage() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showConfetti, setShowConfetti] = useState(false)
   const [profileImageUrl, setProfileImageUrl] = useState("")
   const [uploadImageDialogOpen, setUploadImageDialogOpen] = useState(false)
@@ -41,93 +42,7 @@ export default function ProfilePage() {
   return (
     <ToastProvider>
       <div className="min-h-screen bg-gray-50/50">
-        {/* Mobile Navigation */}
-        <div className="md:hidden fixed top-0 left-0 right-0 p-4 bg-white border-b z-50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Image src="/placeholder.svg?height=32&width=32" alt="Learnrithm AI Logo" width={32} height={32} />
-              <span className="font-semibold text-xl">Learnrithm AI</span>
-            </div>
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-900 hover:bg-gray-100/80">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64 p-0">
-                <>
-                  <SheetHeader className="p-4 border-b">
-                    <div className="flex items-center gap-2">
-                      <Image
-                        src="/placeholder.svg?height=32&width=32"
-                        alt="Learnrithm AI Logo"
-                        width={32}
-                        height={32}
-                      />
-                      <span className="font-semibold text-xl">Learnrithm AI</span>
-                    </div>
-                  </SheetHeader>
-                  <nav className="flex-1 p-4 space-y-1.5">
-                    <Link href="/pricing">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start gap-2 px-3 py-2 h-auto text-gray-600 hover:text-gray-900 hover:bg-gray-100/80"
-                      >
-                        <Home className="h-5 w-5" /> Pricing
-                      </Button>
-                    </Link>
-                    <Link href="/dashboard">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start gap-2 px-3 py-2 h-auto text-gray-600 hover:text-gray-900 hover:bg-gray-100/80"
-                      >
-                        <Layout className="h-5 w-5" /> Dashboard
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-2 px-3 py-2 h-auto bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 font-medium border-l-2 border-blue-600"
-                    >
-                      <Compass className="h-5 w-5" /> Profile
-                    </Button>
-                  </nav>
-                </>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-
-        {/* Desktop Sidebar */}
-        <aside className="fixed left-0 top-0 h-full w-64 bg-white p-4 border-r hidden md:block shadow-sm">
-          <div className="flex items-center gap-2 mb-8 px-2">
-            <Image src="/placeholder.svg?height=32&width=32" alt="Learnrithm AI Logo" width={32} height={32} />
-            <span className="font-semibold text-xl">Learnrithm AI</span>
-          </div>
-          <nav className="space-y-1.5">
-            <Link href="/pricing">
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-2 px-3 py-2 h-auto text-gray-600 hover:text-gray-900 hover:bg-gray-100/80"
-              >
-                <Home className="h-5 w-5" /> Pricing
-              </Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-2 px-3 py-2 h-auto text-gray-600 hover:text-gray-900 hover:bg-gray-100/80"
-              >
-                <Layout className="h-5 w-5" /> Dashboard
-              </Button>
-            </Link>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 px-3 py-2 h-auto bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 font-medium border-l-2 border-blue-600"
-            >
-              <Compass className="h-5 w-5" /> Profile
-            </Button>
-          </nav>
-        </aside>
+        <Sidebar />
 
         {/* Upload Profile Image Dialog */}
 
@@ -167,7 +82,7 @@ export default function ProfilePage() {
                             <Camera className="h-8 w-8 text-gray-400 mb-2" />
                             <p className="text-sm text-gray-500">Click to browse</p>
                           </div>
-                          <input
+                          <Input
                             type="file"
                             ref={fileInputRef}
                             className="hidden"
@@ -288,3 +203,4 @@ export default function ProfilePage() {
     </ToastProvider>
   )
 }
+

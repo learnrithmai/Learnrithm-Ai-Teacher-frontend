@@ -41,6 +41,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { SERVER_API_URL } from "@/lib/consts"
+import type { ForgotPasswordSchema } from "@/types/authSchema"
+import type { changePasswordSchema, UpdateInfoSchema } from "@/types/userSchema"
+
+// Add axios import at the top
+import axios from "axios"
 
 export default function ProfileComponent() {
   const [showOldPassword, setShowOldPassword] = useState(false)
@@ -85,14 +91,14 @@ export default function ProfileComponent() {
     linkedin: "johndoe",
     instagram: "johndoe",
     facebook: "johndoe",
-    twitter: "johndoe",
+    x: "johndoe",
   })
 
   const [socialMedia, setSocialMedia] = useState({
     linkedin: "johndoe",
     instagram: "johndoe",
     facebook: "johndoe",
-    twitter: "johndoe",
+    x: "johndoe",
   })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -116,49 +122,91 @@ export default function ProfileComponent() {
       socialMedia.linkedin !== originalSocialMedia.linkedin ||
       socialMedia.instagram !== originalSocialMedia.instagram ||
       socialMedia.facebook !== originalSocialMedia.facebook ||
-      socialMedia.twitter !== originalSocialMedia.twitter
+      socialMedia.x !== originalSocialMedia.x
 
     setSocialFormChanged(hasChanged)
   }, [socialMedia, originalSocialMedia])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!oldPassword) {
-      toast({
-        title: "Error",
-        description: "Please enter your current password",
-        variant: "destructive",
-      })
-      return
-    }
+    try {
+      if (!oldPassword) {
+        toast({
+          title: "Error",
+          description: "Please enter your current password",
+          variant: "destructive",
+        })
+        return
+      }
 
-    if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match!",
-        variant: "destructive",
-      })
-      return
-    }
+      if (password !== confirmPassword) {
+        toast({
+          title: "Error",
+          description: "Passwords do not match!",
+          variant: "destructive",
+        })
+        return
+      }
 
-    // Handle password update
-    toast({
-      title: "Success",
-      description: "Password updated successfully",
-    })
-    setOldPassword("")
-    setPassword("")
-    setConfirmPassword("")
+      const dataToSend: changePasswordSchema = {
+        id: "ss",
+        password: oldPassword,
+        newPassword: password,
+      }
+
+      const { status, data }: { status: number; data: { error?: string; message?: string } } = await axios.post(
+        `${SERVER_API_URL}/user/update-password`,
+        dataToSend,
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      )
+
+      if (status === 200) {
+        // Handle password update
+        toast({
+          title: "Success",
+          description: "Password updated successfully",
+        })
+        setOldPassword("")
+        setPassword("")
+        setConfirmPassword("")
+      } else if (status === 404 && data.error) {
+        toast({ title: data.error })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error Updating password" })
+    }
   }
 
-  const sendVerificationEmail = () => {
-    // API call to send verification email would go here
-    setVerificationEmailSent(true)
-    toast({
-      title: "Verification Email Sent",
-      description: "Please check your inbox and follow the instructions",
-    })
+  const sendVerificationEmail = async () => {
+    try {
+      const dataToSend: ForgotPasswordSchema = {
+        email: personalInfo.email,
+      }
+      const { status, data }: { status: number; data: { error?: string; message?: string } } = await axios.post(
+        `${SERVER_API_URL}/auth/send-verification-email`,
+        dataToSend,
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      )
+
+      if (status === 200) {
+        setVerificationEmailSent(true)
+        toast({
+          title: "Verification Email Sent",
+          description: "Please check your inbox and follow the instructions",
+        })
+      } else if (status === 404 && data.error) {
+        toast({ title: data.error })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error sending verification link" })
+    }
   }
 
   const handleForgotPassword = () => {
@@ -166,23 +214,45 @@ export default function ProfileComponent() {
     setForgotPasswordOpen(true)
   }
 
-  const handleForgotPasswordSubmit = (e: React.FormEvent) => {
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // API call to send password reset email would go here
-    setForgotPasswordSent(true)
 
-    // Show toast notification
-    toast({
-      title: "Password Reset Link Sent",
-      description: "Check your email for instructions to reset your password",
-    })
+    try {
+      if (!forgotPasswordEmail) {
+        return toast({
+          title: "Please Enter your email",
+        })
+      }
+      const dataToSend: ForgotPasswordSchema = {
+        email: forgotPasswordEmail,
+      }
+      const { status, data }: { status: number; data: { error?: string; message?: string } } = await axios.post(
+        `${SERVER_API_URL}/auth/forgot-password`,
+        dataToSend,
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      )
 
-    // Reset form after a delay so the user can see the success message
-    setTimeout(() => {
-      setForgotPasswordEmail("")
-      setForgotPasswordSent(false)
-      setForgotPasswordOpen(false)
-    }, 3000)
+      if (status === 200) {
+        toast({ title: data.message })
+        setForgotPasswordSent(true)
+        toast({
+          title: "Password Reset Link Sent",
+          description: "Check your email for instructions to reset your password",
+        })
+        setTimeout(() => {
+          setForgotPasswordEmail("")
+          setForgotPasswordSent(false)
+          setForgotPasswordOpen(false)
+        }, 3000)
+      } else if (status === 404 && data.error) {
+        toast({ title: data.error })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error sending reset link" })
+    }
   }
 
   const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,32 +275,86 @@ export default function ProfileComponent() {
     fileInputRef.current?.click()
   }
 
-  const handlePersonalInfoSubmit = (e: React.FormEvent) => {
+  const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Update the original state to match the current state
-    setOriginalPersonalInfo({ ...personalInfo })
-    setFormChanged(false)
-    setEditPersonalInfoOpen(false)
+    try {
+      if (!formChanged) {
+        return toast({
+          title: "No Field changed!",
+        })
+      }
 
-    toast({
-      title: "Personal Information Updated",
-      description: "Your personal information has been updated successfully",
-    })
+      const dataToSend: UpdateInfoSchema = { ...personalInfo, id: "zzz" }
+
+      const { status, data }: { status: number; data: { error?: string; message?: string } } = await axios.post(
+        `${SERVER_API_URL}/user/update-info`,
+        dataToSend,
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      )
+
+      if (status === 200) {
+        // Update the original state to match the current state
+        setOriginalPersonalInfo({ ...personalInfo })
+        setFormChanged(false)
+        setEditPersonalInfoOpen(false)
+
+        toast({
+          title: "Personal Information Updated",
+          description: "Your personal information has been updated successfully",
+        })
+      } else if (status === 404 && data.error) {
+        toast({ title: data.error })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error sending reset link" })
+    }
   }
 
-  const handleSocialMediaSubmit = (e: React.FormEvent) => {
+  const handleSocialMediaSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Update the original state to match the current state
-    setOriginalSocialMedia({ ...socialMedia })
-    setSocialFormChanged(false)
-    setEditSocialMediaOpen(false)
+    e.preventDefault()
 
-    toast({
-      title: "Social Media Updated",
-      description: "Your social media links have been updated successfully",
-    })
+    try {
+      if (!formChanged) {
+        return toast({
+          title: "No Field changed!",
+        })
+      }
+
+      const dataToSend: UpdateInfoSchema = {
+        ...socialMedia,
+        id: "zzz",
+      }
+      const { status, data }: { status: number; data: { error?: string; message?: string } } = await axios.post(
+        `${SERVER_API_URL}/user/update-info`,
+        dataToSend,
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      )
+
+      if (status === 200) {
+        // Update the original state to match the current state
+        setOriginalSocialMedia({ ...socialMedia })
+        setSocialFormChanged(false)
+        setEditSocialMediaOpen(false)
+
+        toast({
+          title: "Social Media Updated",
+          description: "Your social media links have been updated successfully",
+        })
+      } else if (status === 404 && data.error) {
+        toast({ title: data.error })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error sending reset link" })
+    }
   }
 
   return (
@@ -241,7 +365,7 @@ export default function ProfileComponent() {
           <DialogHeader>
             <DialogTitle>Reset your password</DialogTitle>
             <DialogDescription>
-              Enter your email address below and we'll send you a link to reset your password.
+              Enter your email address below and we&apos;ll send you a link to reset your password.
             </DialogDescription>
           </DialogHeader>
 
@@ -297,7 +421,7 @@ export default function ProfileComponent() {
               <Upload className="h-8 w-8 text-gray-400 mb-2" />
               <p className="text-sm text-gray-500">Click to browse</p>
             </div>
-            <input
+            <Input
               type="file"
               ref={fileInputRef}
               className="hidden"
@@ -353,17 +477,18 @@ export default function ProfileComponent() {
                   id="edit-birthdate"
                   type="date"
                   value={personalInfo.birthDate}
-                  onChange={(e) => setPersonalInfo({ ...personalInfo, birthDate: e.target.value })}
+                  onChange={(e) =>
+                    setPersonalInfo({
+                      ...personalInfo,
+                      birthDate: e.target.value,
+                    })
+                  }
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="edit-country">Country</Label>
-                <Input
-                  id="edit-country"
-                  value={personalInfo.country}
-                  onChange={(e) => setPersonalInfo({ ...personalInfo, country: e.target.value })}
-                />
+                <Input id="edit-country" disabled value={personalInfo.country} />
               </div>
 
               <div className="space-y-2">
@@ -371,7 +496,12 @@ export default function ProfileComponent() {
                 <Input
                   id="edit-institution"
                   value={personalInfo.institution}
-                  onChange={(e) => setPersonalInfo({ ...personalInfo, institution: e.target.value })}
+                  onChange={(e) =>
+                    setPersonalInfo({
+                      ...personalInfo,
+                      institution: e.target.value,
+                    })
+                  }
                 />
               </div>
 
@@ -380,7 +510,12 @@ export default function ProfileComponent() {
                 <Input
                   id="edit-phone"
                   value={personalInfo.phoneNumber}
-                  onChange={(e) => setPersonalInfo({ ...personalInfo, phoneNumber: e.target.value })}
+                  onChange={(e) =>
+                    setPersonalInfo({
+                      ...personalInfo,
+                      phoneNumber: e.target.value,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -418,7 +553,12 @@ export default function ProfileComponent() {
                   <Input
                     id="edit-linkedin"
                     value={socialMedia.linkedin}
-                    onChange={(e) => setSocialMedia({ ...socialMedia, linkedin: e.target.value })}
+                    onChange={(e) =>
+                      setSocialMedia({
+                        ...socialMedia,
+                        linkedin: e.target.value,
+                      })
+                    }
                     className="rounded-l-none"
                   />
                 </div>
@@ -435,7 +575,12 @@ export default function ProfileComponent() {
                   <Input
                     id="edit-instagram"
                     value={socialMedia.instagram}
-                    onChange={(e) => setSocialMedia({ ...socialMedia, instagram: e.target.value })}
+                    onChange={(e) =>
+                      setSocialMedia({
+                        ...socialMedia,
+                        instagram: e.target.value,
+                      })
+                    }
                     className="rounded-l-none"
                   />
                 </div>
@@ -452,7 +597,12 @@ export default function ProfileComponent() {
                   <Input
                     id="edit-facebook"
                     value={socialMedia.facebook}
-                    onChange={(e) => setSocialMedia({ ...socialMedia, facebook: e.target.value })}
+                    onChange={(e) =>
+                      setSocialMedia({
+                        ...socialMedia,
+                        facebook: e.target.value,
+                      })
+                    }
                     className="rounded-l-none"
                   />
                 </div>
@@ -468,8 +618,13 @@ export default function ProfileComponent() {
                   </span>
                   <Input
                     id="edit-twitter"
-                    value={socialMedia.twitter}
-                    onChange={(e) => setSocialMedia({ ...socialMedia, twitter: e.target.value })}
+                    value={socialMedia.x}
+                    onChange={(e) =>
+                      setSocialMedia({
+                        ...socialMedia,
+                        x: e.target.value,
+                      })
+                    }
                     className="rounded-l-none"
                   />
                 </div>
@@ -673,7 +828,7 @@ export default function ProfileComponent() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <a
-                        href={`https://x.com/${socialMedia.twitter}`}
+                        href={`https://x.com/${socialMedia.x}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
@@ -683,7 +838,7 @@ export default function ProfileComponent() {
                       </a>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>x.com/{socialMedia.twitter}</p>
+                      <p>x.com/{socialMedia.x}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

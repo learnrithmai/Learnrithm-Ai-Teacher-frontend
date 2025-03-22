@@ -49,7 +49,6 @@ export default function SettingsComponent() {
   const [deleteReason, setDeleteReason] = useState("")
   const [showConfetti, setShowConfetti] = useState(false)
   const [bellShake, setBellShake] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(true)
   const [marketingEmails, setMarketingEmails] = useState(false)
@@ -226,7 +225,7 @@ export default function SettingsComponent() {
                               <div className="space-y-2">
                                 <Label htmlFor="phone-number">Phone Number</Label>
                                 <Input id="phone-number" placeholder="+1 (555) 123-4567" />
-                                <p className="text-xs text-gray-500">We'll send a verification code to this number</p>
+                                <p className="text-xs text-gray-500">We&apos;ll send a verification code to this number</p>
                               </div>
 
                               <Button className="w-full">Send Verification Code</Button>
@@ -443,7 +442,7 @@ export default function SettingsComponent() {
                             <Label>Data to Export</Label>
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
-                                <input
+                                <Input
                                   type="checkbox"
                                   id="export-profile"
                                   className="rounded border-gray-300"
@@ -454,7 +453,7 @@ export default function SettingsComponent() {
                                 </Label>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <input
+                                <Input
                                   type="checkbox"
                                   id="export-activity"
                                   className="rounded border-gray-300"
@@ -465,7 +464,7 @@ export default function SettingsComponent() {
                                 </Label>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <input
+                                <Input
                                   type="checkbox"
                                   id="export-subscription"
                                   className="rounded border-gray-300"
@@ -666,7 +665,7 @@ export default function SettingsComponent() {
                             <Label>Notification Preferences</Label>
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
-                                <input
+                                <Input
                                   type="checkbox"
                                   id="notify-renewal"
                                   className="rounded border-gray-300"
@@ -677,7 +676,7 @@ export default function SettingsComponent() {
                                 </Label>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <input
+                                <Input
                                   type="checkbox"
                                   id="notify-payment"
                                   className="rounded border-gray-300"
@@ -688,7 +687,7 @@ export default function SettingsComponent() {
                                 </Label>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <input
+                                <Input
                                   type="checkbox"
                                   id="notify-expiration"
                                   className="rounded border-gray-300"
@@ -699,7 +698,7 @@ export default function SettingsComponent() {
                                 </Label>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <input
+                                <Input
                                   type="checkbox"
                                   id="notify-price"
                                   className="rounded border-gray-300"
@@ -832,7 +831,7 @@ export default function SettingsComponent() {
           <DialogHeader>
             <DialogTitle>Why are you leaving?</DialogTitle>
             <DialogDescription>
-              We'd appreciate knowing why you want to delete your account. This helps us improve our service.
+              We&apos;d appreciate knowing why you want to delete your account. This helps us improve our service.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
