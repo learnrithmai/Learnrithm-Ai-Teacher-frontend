@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { OpenAIRequestBody } from '@/types/openai';
-import { validateChatRequest, processChatRequest } from '@/lib/api';
-import { headers } from 'next/headers';
+import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 
 export async function POST(request: Request) {
   try {
@@ -16,14 +15,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Normalize mode to lowercase for consistency
+    const mode = body.mode?.toLowerCase();
+
     // Choose the appropriate mode handler
-    switch (body.mode) {
+    switch (mode) {
       case 'reason':
       case 'quiz':
       case 'study':
       case 'homeworkhelper':
         // Redirect to the specific mode endpoint
-        const response = await fetch(new URL(`/api/chat/${body.mode}`, request.url), {
+        const response = await fetch(new URL(`/api/chat/${mode}`, request.url), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -31,11 +33,15 @@ export async function POST(request: Request) {
           body: JSON.stringify(body),
         });
         
-        return response;
+        const data = await response.json();
+        return NextResponse.json(data);
         
       default:
         // Default chat behavior (no specific mode)
-        return processChatRequest(body.messages, {
+        // Add default system prompt
+        const messages = addSystemPrompt(body.messages, 'default');
+        
+        return processChatRequest(messages, {
           max_tokens: body.max_tokens || 1000,
           temperature: 0.7,
         });

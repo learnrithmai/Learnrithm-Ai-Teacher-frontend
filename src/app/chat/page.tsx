@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { BookOpen, Brain, FileQuestion, HelpCircle } from "lucide-react";
 import { Chat, Message, FilePreview, Mode } from "@/types/chat";
-import { AnalysisResult } from "@/types/files"; // New import
+import { AnalysisResult } from "@/types/files";
 import { groupChatsByDate } from "@/utils/dateUtils";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { MobileSidebar } from "@/components/chat/MobileSidebar";
@@ -18,7 +18,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFeedbackVisible, setIsFeedbackVisible] = useState(false);
   const [currentFeedbackId, setCurrentFeedbackId] = useState<string | null>(null);
-  const [activeMode, setActiveMode] = useState<string | null>(null);
+  const [activeMode, setActiveMode] = useState<string>("study"); // Default mode is study (lowercase ID)
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filePreview, setFilePreview] = useState<FilePreview[]>([]);
 
@@ -26,18 +26,24 @@ export default function Home() {
     { id: "study", name: "Study", icon: BookOpen },
     { id: "reason", name: "Reason", icon: Brain },
     { id: "quiz", name: "Quiz", icon: FileQuestion },
-    { id: "homework", name: "Homework Helper", icon: HelpCircle },
+    { id: "homeworkhelper", name: "Homework Helper", icon: HelpCircle },
   ];
 
   const chatsByDate = groupChatsByDate(chats);
 
   // New handler for file analysis completion
-  const handleFileAnalysisComplete = (fileId: string, analysis: AnalysisResult) => {
-    // Update the file preview with analysis data - add required details property
+  const handleFileAnalysisComplete = (fileId: string, analysis: any) => {
+    // Add the required analysisType if it's missing
+    const enhancedAnalysis = {
+      ...analysis,
+      analysisType: analysis.analysisType || 'text' // Default to text if missing
+    };
+    
+    // Update the file preview with analysis data
     setFilePreview(prev => 
       prev.map(file => 
         file.id === fileId 
-          ? { ...file, analysis: { ...analysis, details: "" } } 
+          ? { ...file, analysis: { ...enhancedAnalysis, details: "" } } 
           : file
       )
     );
@@ -110,21 +116,65 @@ export default function Home() {
     setFilePreview([]);
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      // Format messages for API request
+      const apiMessages = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Call the API with the selected mode
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: apiMessages,
+          mode: activeMode,  // This is now properly the lowercase ID
+          max_tokens: 1500
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Create AI message from response
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "This is a simulated AI response. In a real implementation, this would be connected to an AI service.",
+        content: data.content || "I couldn't generate a response. Please try again.",
         role: "assistant",
         timestamp: new Date(),
         chatId
       };
+
       const newMessages = [...updatedMessages, aiMessage];
       setMessages(newMessages);
       setChats(prev => prev.map(chat => 
-        chat.id === chatId ? { ...chat, messages: [...chat.messages, aiMessage] } : chat
+        chat.id === chatId ? { ...chat, messages: newMessages } : chat
       ));
+    } catch (error) {
+      console.error("Error calling API:", error);
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Sorry, there was an error processing your request. Please try again.",
+        role: "assistant",
+        timestamp: new Date(),
+        chatId
+      };
+      
+      setMessages([...updatedMessages, errorMessage]);
+      setChats(prev => prev.map(chat => 
+        chat.id === chatId ? { ...chat, messages: [...chat.messages, errorMessage] } : chat
+      ));
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const selectChat = (chatId: string) => {
@@ -198,7 +248,7 @@ export default function Home() {
           onRemoveFile={removeFile}
           onSend={handleSend}
           onModeSelect={setActiveMode}
-          onFileAnalysisComplete={handleFileAnalysisComplete} // New prop
+          onFileAnalysisComplete={handleFileAnalysisComplete}
         />
       </main>
     </div>

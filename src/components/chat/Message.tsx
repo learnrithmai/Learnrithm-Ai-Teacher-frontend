@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Copy, ThumbsUp, ThumbsDown, X, Paperclip } from "lucide-react";
 import { Message as MessageType } from "@/types/chat";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface MessageProps {
   message: MessageType;
@@ -41,7 +43,11 @@ export function Message({ message, isFeedbackVisible, onToggleFeedback }: Messag
         </div>
       ) : (
         <div className="flex flex-col max-w-[80%]">
-          <p className="mb-2 whitespace-pre-wrap">{message.content}</p>
+          <div className="prose prose-sm dark:prose-invert">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content}
+            </ReactMarkdown>
+          </div>
           <div className="flex items-center gap-2 mt-2">
             <Button 
               variant="ghost" 

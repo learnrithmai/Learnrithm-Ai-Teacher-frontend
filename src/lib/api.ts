@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ChatMessage, OpenAIRequestBody } from '@/types/openai';
 import openai, { handleOpenAIError } from '@/lib/openai';
-import { trimConversationHistory } from '@/lib/tokenManagement';
+import { trimConversationHistory, selectAppropriateModel } from '@/lib/tokenManagement';
 import { getCachedResponse, setCachedResponse, generateCacheKey } from '@/lib/cache';
 
 // Validate chat request
@@ -21,7 +21,9 @@ export function validateChatRequest(body: any): { isValid: boolean; errorMessage
 export function addSystemPrompt(messages: ChatMessage[], mode: string): ChatMessage[] {
   const systemPrompts: Record<string, string> = {
     study: "You are an educational AI tutor. Provide clear, concise explanations with examples. Break down complex topics step-by-step. When appropriate, use analogies to illustrate concepts. Be encouraging and supportive, but focus on accuracy and educational value.",
-    // Add other modes as needed
+    reason: "You are an analytical reasoning assistant. Your purpose is to help users think through problems logically. Focus on breaking down complex issues, identifying assumptions, evaluating evidence, and constructing sound arguments. Help users understand different perspectives on issues. Present balanced viewpoints and highlight logical fallacies when they appear.",
+    quiz: "You are an educational quiz generator. Create engaging, accurate questions on the topic the user specifies. Include a mix of question types (multiple choice, short answer, etc). Provide correct answers and explanations after the user attempts to answer. Adjust difficulty based on user performance. Be encouraging but prioritize educational value.",
+    homeworkhelper: "You are a homework assistance tutor. Help students understand their homework problems by guiding them through the solution process without giving direct answers. Provide explanations, examples, and hints that lead to understanding. Encourage critical thinking and independent problem solving. Focus on teaching underlying concepts rather than just getting to the answer.",
     default: "You are a helpful AI assistant."
   };
 
@@ -46,15 +48,34 @@ export async function processChatRequest(
     model?: string;
     mode?: string;
     useCache?: boolean;
+    trimTokens?: number;
+    minMessages?: number;
+    autoSelectModel?: boolean;
   }
 ) {
   try {
-    const model = options.model || 'gpt-3.5-turbo';
+    // Apply message trimming if specified
+    let processedMessages = messages;
+    if (options.trimTokens && options.minMessages) {
+      processedMessages = trimConversationHistory(messages, options.trimTokens, options.minMessages);
+    }
+    
+    // Auto-select model based on content if enabled
+    let model = options.model || 'gpt-3.5-turbo';
+    if (options.autoSelectModel) {
+      // Find the last user message
+      const lastUserMsg = [...processedMessages]
+        .reverse()
+        .find(m => m.role === 'user')?.content || '';
+      
+      model = selectAppropriateModel(lastUserMsg);
+    }
+
     const useCache = options.useCache !== false;
     
     // Check cache if enabled
     if (useCache) {
-      const cacheKey = generateCacheKey(messages, model, options.mode);
+      const cacheKey = generateCacheKey(processedMessages, model, options.mode);
       const cachedResponse = getCachedResponse(cacheKey);
       if (cachedResponse) {
         return NextResponse.json(cachedResponse);
@@ -64,7 +85,7 @@ export async function processChatRequest(
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
       model: model,
-      messages: messages,
+      messages: processedMessages,
       max_tokens: options.max_tokens || 1000,
       temperature: options.temperature || 0.7,
     });
@@ -79,7 +100,7 @@ export async function processChatRequest(
 
     // Cache the response if enabled
     if (useCache) {
-      const cacheKey = generateCacheKey(messages, model, options.mode);
+      const cacheKey = generateCacheKey(processedMessages, model, options.mode);
       setCachedResponse(cacheKey, responseData);
     }
 

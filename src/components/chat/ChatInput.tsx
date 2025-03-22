@@ -179,11 +179,11 @@ export function ChatInput({
                 variant="outline"
                 size="sm"
                 className={`rounded-full flex items-center gap-1 text-xs border transition-colors ${
-                  activeMode === mode.name 
+                  activeMode === mode.id  // Changed from mode.name to mode.id
                     ? "bg-black text-white border-black" 
                     : "bg-transparent text-gray-700 border-gray-300"
                 }`}
-                onClick={() => onModeSelect(mode.name)}
+                onClick={() => onModeSelect(mode.id)}  // Changed from mode.name to mode.id
               >
                 <Icon size={14} />
                 <span>{mode.name}</span>
