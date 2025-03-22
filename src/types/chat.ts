@@ -19,6 +19,12 @@ export interface FilePreview {
   name: string;
   size: number;
   type: string;
+  analysis?: AnalysisResult; 
+}
+
+export interface AnalysisResult {
+  summary: string;
+  details: string;
 }
 
 export interface ChatsByDate {

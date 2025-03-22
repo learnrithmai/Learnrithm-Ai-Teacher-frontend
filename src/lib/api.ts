@@ -17,6 +17,26 @@ export function validateChatRequest(body: any): { isValid: boolean; errorMessage
   return { isValid: true };
 }
 
+// Add a system prompt based on the conversation mode
+export function addSystemPrompt(messages: ChatMessage[], mode: string): ChatMessage[] {
+  const systemPrompts: Record<string, string> = {
+    study: "You are an educational AI tutor. Provide clear, concise explanations with examples. Break down complex topics step-by-step. When appropriate, use analogies to illustrate concepts. Be encouraging and supportive, but focus on accuracy and educational value.",
+    // Add other modes as needed
+    default: "You are a helpful AI assistant."
+  };
+
+  const systemPrompt = systemPrompts[mode] || systemPrompts.default;
+  
+  // Check if there's already a system message at the beginning
+  if (messages.length > 0 && messages[0].role === 'system') {
+    // Replace existing system message
+    return [{ role: 'system', content: systemPrompt }, ...messages.slice(1)];
+  } else {
+    // Add new system message at the beginning
+    return [{ role: 'system', content: systemPrompt }, ...messages];
+  }
+}
+
 // Process a chat request with OpenAI
 export async function processChatRequest(
   messages: ChatMessage[],

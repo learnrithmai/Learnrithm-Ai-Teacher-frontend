@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BookOpen, Brain, FileQuestion, HelpCircle } from "lucide-react";
 import { Chat, Message, FilePreview, Mode } from "@/types/chat";
+import { AnalysisResult } from "@/types/files"; // New import
 import { groupChatsByDate } from "@/utils/dateUtils";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { MobileSidebar } from "@/components/chat/MobileSidebar";
@@ -29,6 +30,38 @@ export default function Home() {
   ];
 
   const chatsByDate = groupChatsByDate(chats);
+
+  // New handler for file analysis completion
+  const handleFileAnalysisComplete = (fileId: string, analysis: AnalysisResult) => {
+    // Update the file preview with analysis data - add required details property
+    setFilePreview(prev => 
+      prev.map(file => 
+        file.id === fileId 
+          ? { ...file, analysis: { ...analysis, details: "" } } 
+          : file
+      )
+    );
+    
+    // Add a system message showing the analysis result
+    const analysisMessage: Message = {
+      id: `analysis-${fileId}`,
+      content: `📄 **File Analysis**: ${analysis.summary}`,
+      role: "assistant",
+      timestamp: new Date(),
+      chatId: currentChatId || ''
+    };
+    
+    setMessages(prev => [...prev, analysisMessage]);
+    
+    // If we have a current chat, update its messages too
+    if (currentChatId) {
+      setChats(prev => prev.map(chat => 
+        chat.id === currentChatId 
+          ? { ...chat, messages: [...chat.messages, analysisMessage] } 
+          : chat
+      ));
+    }
+  };
 
   const createNewChat = () => {
     const newChatId = Date.now().toString();
@@ -165,6 +198,7 @@ export default function Home() {
           onRemoveFile={removeFile}
           onSend={handleSend}
           onModeSelect={setActiveMode}
+          onFileAnalysisComplete={handleFileAnalysisComplete} // New prop
         />
       </main>
     </div>

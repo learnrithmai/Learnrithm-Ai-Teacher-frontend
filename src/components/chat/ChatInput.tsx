@@ -1,8 +1,9 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, X, Send } from "lucide-react";
+import { Upload, X, Send, Loader } from "lucide-react";
 import { FilePreview, Mode } from "@/types/chat";
+import { AnalysisResult } from "@/types/files";
 
 interface ChatInputProps {
   input: string;
@@ -14,6 +15,7 @@ interface ChatInputProps {
   onRemoveFile: (fileId: string) => void;
   onSend: () => void;
   onModeSelect: (mode: string) => void;
+  onFileAnalysisComplete?: (fileId: string, analysis: AnalysisResult) => void;
 }
 
 export function ChatInput({ 
@@ -25,13 +27,69 @@ export function ChatInput({
   onFileChange, 
   onRemoveFile, 
   onSend, 
-  onModeSelect 
+  onModeSelect,
+  onFileAnalysisComplete
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [processingFiles, setProcessingFiles] = useState<string[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const handleFileUpload = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  // Enhanced file upload handler with streaming processing
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
+    
+    // Standard file handling that adds files to preview
+    onFileChange(e);
+    
+    // Process files with streaming API if we have the callback
+    if (onFileAnalysisComplete && e.target.files?.length) {
+      const files = Array.from(e.target.files);
+      
+      // Process each file sequentially
+      for (const file of files) {
+        try {
+          // Add file to processing state
+          setProcessingFiles(prev => [...prev, file.name]);
+          
+          // Create form data for this file
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('mode', activeMode || 'study');
+          
+          // Call the streaming API endpoint
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to analyze file');
+          }
+          
+          // Process successful response
+          const data = await response.json();
+          
+          // Find the file ID that matches this filename in our file preview
+          // This ensures we use the correct ID that was assigned during onFileChange
+          const matchingFile = filePreview.find(f => f.name === file.name);
+          if (matchingFile && data.success && data.analysisResult) {
+            onFileAnalysisComplete(matchingFile.id, data.analysisResult);
+          }
+        } catch (error) {
+          console.error('Error processing file:', error);
+          setFileError(error instanceof Error ? error.message : 'Error analyzing file');
+        } finally {
+          // Remove file from processing state
+          setProcessingFiles(prev => prev.filter(name => name !== file.name));
+        }
+      }
     }
   };
 
@@ -42,10 +100,12 @@ export function ChatInput({
           type="file" 
           ref={fileInputRef} 
           className="hidden" 
-          onChange={onFileChange}
+          onChange={handleFileChange}
           accept=".pdf,.txt,.docx,image/*"
           multiple
         />
+        
+        {/* File preview section with processing indicators */}
         {filePreview.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">
             {filePreview.map(file => (
@@ -54,16 +114,27 @@ export function ChatInput({
                 className="flex items-center bg-gray-100 rounded-lg px-3 py-1 text-sm"
               >
                 <span className="truncate max-w-xs">{file.name}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 ml-1 text-gray-500 hover:text-gray-700"
-                  onClick={() => onRemoveFile(file.id)}
-                >
-                  <X size={14} />
-                </Button>
+                {processingFiles.includes(file.name) ? (
+                  <Loader size={14} className="ml-1 animate-spin" />
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 ml-1 text-gray-500 hover:text-gray-700"
+                    onClick={() => onRemoveFile(file.id)}
+                  >
+                    <X size={14} />
+                  </Button>
+                )}
               </div>
             ))}
+          </div>
+        )}
+        
+        {/* Error message display */}
+        {fileError && (
+          <div className="text-red-500 text-xs mb-2">
+            {fileError}
           </div>
         )}
         
@@ -74,8 +145,13 @@ export function ChatInput({
             className="h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 ml-1"
             onClick={handleFileUpload}
             title="Upload files or images"
+            disabled={processingFiles.length > 0}
           >
-            <Upload size={16} />
+            {processingFiles.length > 0 ? (
+              <Loader size={16} className="animate-spin" />
+            ) : (
+              <Upload size={16} />
+            )}
           </Button>
           <Input
             placeholder="Ask anything"
