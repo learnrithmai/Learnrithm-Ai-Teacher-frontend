@@ -47,6 +47,7 @@
     "embla-carousel-react": "^8.5.2",
     "framer-motion": "^12.4.0",
     "gsap": "^3.12.7",
+    "http-errors": "^2.0.0",
     "input-otp": "^1.4.2",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.474.0",
@@ -79,6 +80,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/axios": "^0.9.36",
+    "@types/http-errors": "^2.0.4",
     "@types/lodash.debounce": "^4.0.9",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.17",

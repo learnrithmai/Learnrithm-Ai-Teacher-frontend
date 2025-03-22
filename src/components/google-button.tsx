@@ -6,7 +6,7 @@ export default function GoogleButton() {
   return (
     <Button
       variant="outline"
-      onClick={() => signIn("google", { callbackUrl: "/" })}
+      onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
       className="w-full py-6 flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 transition-all"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24">

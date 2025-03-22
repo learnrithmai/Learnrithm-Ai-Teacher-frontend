@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
-import axios from "axios";
 import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +18,11 @@ import {
 import { ArrowRight } from "lucide-react";
 import { countries } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import GoogleButton from "./google-button";
 import { RegisterUserSchema } from "@/types/authSchema";
 import logger from "@/utils/chalkLogger";
-import { SERVER_API_URL } from "@/lib/consts";
+import { signIn } from "next-auth/react";
 
 // Extend the RegisterUserSchema with a confirmPassword field for form validation.
 type FormValues = RegisterUserSchema & {
@@ -32,6 +31,8 @@ type FormValues = RegisterUserSchema & {
 
 export default function Signup() {
   const { toast } = useToast();
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
@@ -82,32 +83,29 @@ export default function Signup() {
       return;
     }
 
-    try {
-      const dataToSend: RegisterUserSchema = {
-        Name: data.Name,
-        email: data.email,
-        password: data.password,
-        country: data.country,
-        method: data.method,
-        referralCode: data.referralCode,
-        image: data.image,
-      };
+    // Prepare data to be passed to the credentials provider.
+    const credentials = {
+      Name: data.Name,
+      email: data.email,
+      password: data.password,
+      country: data.country,
+      referralCode: data.referralCode,
+      method: "normal",
+      image: data.image,
+      isSignup: "true",
+    };
 
-      console.log(dataToSend);
+    // Use NextAuth signIn with the "credentials" provider.
+    const result = await signIn("credentials", {
+      redirect: false,
+      ...credentials,
+    });
 
-      const Request_Url = `${SERVER_API_URL}/auth/register`;
-      const { status } = await axios.post(Request_Url, dataToSend, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (status === 200 || status === 201) {
-        toast({ title: "User registered successfully" });
-        setTimeout(() => redirect("/"), 2000);
-      }
-    } catch (error) {
-      logger.error("An error occurred during registration", error as string);
+    if (result?.ok) {
+      toast({ title: "User registered successfully" });
+      setTimeout(() => router.push("/"), 2000);
+    } else {
+      logger.error("An error occurred during registration", result?.error || "");
       toast({ title: "An error occurred during registration" });
     }
   };
@@ -213,10 +211,7 @@ export default function Signup() {
                     <SelectContent className="max-h-[300px]">
                       <SelectGroup>
                         {countries.map((country) => (
-                          <SelectItem
-                            key={country}
-                            value={country}
-                          >
+                          <SelectItem key={country} value={country}>
                             {country}
                           </SelectItem>
                         ))}

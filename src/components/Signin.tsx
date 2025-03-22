@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { useForm, SubmitHandler } from "react-hook-form";
-import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight } from "lucide-react";
@@ -22,10 +21,19 @@ import GoogleButton from "./google-button";
 import { useToast } from "@/hooks/use-toast";
 import { ForgotPasswordSchema, LoginSchema } from "@/types/authSchema";
 import logger from "@/utils/chalkLogger";
-import { SERVER_API_URL } from "@/lib/consts";
+import { signIn } from "next-auth/react";
 
 export default function Signin() {
   const { toast } = useToast();
+
+  // Remove direct API test call to avoid extraneous requests.
+  // useEffect(() => {
+  //   async function test() {
+  //     const test = await axios.get(`${SERVER_API_URL}/auth/test`);
+  //     console.log(test)
+  //   }
+  //   test();
+  // }, []);
 
   // Sign in form
   const {
@@ -39,7 +47,7 @@ export default function Signin() {
     },
   });
 
-  // Forgot password form
+  // Forgot password form remains as is.
   const {
     register: registerForgot,
     handleSubmit: handleSubmitForgot,
@@ -58,7 +66,7 @@ export default function Signin() {
       document.body.style.opacity = "1";
     }, 10);
 
-    // Create a GSAP context for better cleanup
+    // GSAP animation context for better cleanup.
     const ctx = gsap.context(() => {
       if (!hasAnimated.current) {
         gsap.from(".animate-in", {
@@ -74,35 +82,31 @@ export default function Signin() {
     return () => ctx.revert();
   }, []);
 
-  // Submit handler for the sign in form
+  // Submit handler for the sign in form using NextAuth.
   const onSubmit: SubmitHandler<LoginSchema> = async (data) => {
-    try {
-      const { status } = await axios.post(
-        `${SERVER_API_URL}/auth/login`,
-        data,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+    // Call signIn with credentials provider.
+    const result = await signIn("credentials", {
+      redirect: false,
+      email: data.email,
+      password: data.password,
+      isSignup: "false",
+    });
 
-      if (status === 200) {
-        toast({ title: "Signed in successfully" });
-        setTimeout(() => (window.location.href = "/"), 2000);
-      }
-    } catch (error) {
-      logger.error("Error signing in", error as string);
+    if (result?.ok) {
+      toast({ title: "Signed in successfully" });
+      setTimeout(() => (window.location.href = "/"), 2000);
+    } else {
+      logger.error("Error signing in", result?.error || "");
       toast({ title: "Error signing in" });
     }
   };
 
-  // Submit handler for the forgot password form
-  const onForgotSubmit: SubmitHandler<ForgotPasswordSchema> = async (
-    dataToSend
-  ) => {
+  // Submit handler for the forgot password form remains unchanged.
+  const onForgotSubmit: SubmitHandler<ForgotPasswordSchema> = async (dataToSend) => {
     const lastSent = localStorage.getItem("lastResetTimestamp");
     const now = Date.now();
 
-    // Check if a reset link was sent in the last 2 minutes
+    // Check if a reset link was sent in the last 2 minutes.
     if (lastSent && now - parseInt(lastSent) < 120000) {
       toast({
         title: "Please wait 2 minutes before requesting another reset link.",
@@ -111,24 +115,22 @@ export default function Signin() {
     }
 
     try {
-      const {
-        status,
-        data,
-      }: { status: number; data: { error?: string; message?: string } } =
-        await axios.post(`${SERVER_API_URL}/auth/forgot-password`, dataToSend, {
-          headers: { "Content-Type": "application/json" },
-        });
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSend),
+      });
+      const result = await response.json();
 
-      if (status === 200) {
-        toast({ title: data.message });
+      if (response.ok) {
+        toast({ title: result.message });
         localStorage.setItem("lastResetTimestamp", now.toString());
         resetForgotForm();
-      } else if (status === 404 && data.error) {
-        forgotErrors.email = { type: "manual", message: data.error };
-        toast({ title: data.error });
+      } else {
+        toast({ title: result.error || "Error sending reset link" });
       }
     } catch (error) {
-      console.error(error);
+      logger.error("Forgot password error", error as string);
       toast({ title: "Error sending reset link" });
     }
   };
@@ -241,7 +243,7 @@ export default function Signin() {
                   </DialogHeader>
                   {/* Forgot Password Form */}
                   <form onSubmit={handleSubmitForgot(onForgotSubmit)}>
-                    <div className="flex flex-col gap-">
+                    <div className="flex flex-col gap-2">
                       <Label htmlFor="forgot-email">Email</Label>
                       <Input
                         id="forgot-email"

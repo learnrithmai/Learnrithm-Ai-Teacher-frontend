@@ -20,8 +20,8 @@ export const envSchema = z.object({
   SERVER_URL: stringNonEmpty().url(),
   SERVER_API_URL: stringNonEmpty().url(),
 
-  // Auth
-  NEXTAUTH_SECRET: stringNonEmpty(),
+  // JWT
+  JWT_SECRET: stringNonEmpty(),
 
  // Google Config
   GOOGLE_CLIENT_ID: stringNonEmpty(),

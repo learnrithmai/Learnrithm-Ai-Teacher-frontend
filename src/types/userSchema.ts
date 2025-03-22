@@ -36,3 +36,21 @@ export type updatePlanSchema = {
     plan: string,
     ExpirationSubscription: string
 };
+
+// ────────────────────────────────────────────────────────────────
+// Cookies Client User Schema
+// ────────────────────────────────────────────────────────────────
+
+export type ClientUserSchema = {
+    id: string,
+    Name: string,
+    email: string,
+    method: string,
+    lastLogin: string,
+    imgThumbnail?: string,
+    token: {
+        accessToken: string,
+        refreshToken: string,
+        tokenExpiry: number
+    }
+}

@@ -1,160 +1,239 @@
-import NextAuth, { NextAuthOptions, DefaultSession } from "next-auth";
+// auth-options.ts
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 import axios from "axios";
-import { JWT } from "next-auth/jwt";
-import { RegisterUserSchema } from "@/types/authSchema";
-import { SERVER_API_URL } from "./consts";
+import { ENV } from "@/types/envSchema";
 import logger from "@/utils/chalkLogger";
+import { SERVER_API_URL } from "./consts";
+import { RegisterUserSchema } from "@/types/authSchema";
+import { JWT } from "next-auth/jwt";
+import { ClientUserSchema } from "@/types/userSchema";
 
-interface Token {
-  accessToken?: string;
-  refreshToken?: string;
-  tokenExpiry?: number;
-  error?: string;
-}
-
-async function refreshAccessToken(token: Token): Promise<Token> {
-  try {
-    const url = "https://oauth2.googleapis.com/token";
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID || "",
-        client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
-        grant_type: "refresh_token",
-        refresh_token: token.refreshToken as string,
-      }),
-    });
-
-    const refreshedTokens = await response.json();
-
-    if (!response.ok) {
-      throw new Error(refreshedTokens.error || "Failed to refresh token");
-    }
-
-    return {
-      ...token,
-      accessToken: refreshedTokens.access_token,
-      tokenExpiry: Date.now() + refreshedTokens.expires_in * 1000,
-      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-    };
-  } catch (error) {
-    console.error("Error refreshing access token", error);
-    return { ...token, error: "RefreshAccessTokenError" };
-  }
-}
+// ----------------------------------------------------------------
+// Module Augmentation for NextAuth Session & JWT Types
+// ----------------------------------------------------------------
 
 declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user?: {
-      name: string;
-      image: string;
-      email: string;
-      userId?: string;
-      accessToken?: string;
-      refreshToken?: string;
-      tokenExpiry?: Date;
-    } & DefaultSession["user"];
+  interface Session {
+    user: {
+      id: string,
+      Name: string,
+      email: string,
+      method: string,
+      lastLogin: string,
+      imgThumbnail?: string,
+    };
+    token: {
+      accessToken: string,
+      refreshToken: string,
+      tokenExpiry: number
+    }
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    accessToken?: string;
-    refreshToken?: string;
-    tokenExpiry?: number;
-    error?: string;
+    id: string;
+    Name: string;
+    email: string;
+    imgThumbnail?: string;
+    method: string,
+    lastLogin: string,
+    accessToken: string;
+    refreshToken: string;
+    tokenExpiry: number;
   }
 }
 
+// ----------------------------------------------------------------
+// Interfaces for API Responses
+// ----------------------------------------------------------------
+
+interface RefreshApiResponse {
+  success: string;
+  accessToken: {
+    token: string;
+  };
+  expiresAt: number; // Unix timestamp in seconds
+  refreshToken?: string;
+}
+interface AuthApiResponse {
+  user: ClientUserSchema;
+}
+
+// ----------------------------------------------------------------
+// Helper: Refresh Access Token via backend refresh endpoint.
+// ----------------------------------------------------------------
+
+
+async function refreshAccessToken(token: JWT): Promise<JWT> {
+  if (!token.refreshToken) {
+    logger.error("No refresh token available.");
+    return { ...token, error: "NoRefreshToken" };
+  }
+  try {
+    const response = await axios.post<RefreshApiResponse>(
+      `${SERVER_API_URL}/refresh-tokens`,
+      null,
+      {
+        headers: { Cookie: `jwt=${token.refreshToken}` },
+        // If your backend expects the refresh token in the body instead, use:
+        // data: { refreshToken: token.refreshToken },
+      }
+    );
+    const data = response.data;
+    logger.info("Access token refreshed successfully.");
+    return {
+      ...token,
+      accessToken: data.accessToken.token,
+      tokenExpiry: Date.now() + (data.expiresAt ? data.expiresAt * 1000 : 3600 * 1000),
+      refreshToken: data.refreshToken ?? token.refreshToken,
+    };
+  } catch (error) {
+    logger.error("Failed to refresh access token:", error as string);
+    return { ...token, error: "RefreshTokenExpired" };
+  }
+}
+
+// ----------------------------------------------------------------
+// NextAuth Options: Handles Google & Email/Password (Login/Signup)
+// ----------------------------------------------------------------
+
 export const authOptions: NextAuthOptions = {
+  secret: ENV.JWT_SECRET,
   providers: [
+    // -------------------------------
+    // Google Authentication Provider
+    // -------------------------------
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      clientId: ENV.GOOGLE_CLIENT_ID || "",
+      clientSecret: ENV.GOOGLE_CLIENT_SECRET || "",
       authorization: {
         params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/youtube.force-ssl",
-          access_type: "offline",
-          prompt: "consent",
+          scope: "openid email profile",
+          access_type: "offline", // to receive a refresh token
+          prompt: "consent",      // forces account selection & consent
         },
       },
     }),
-  ],
-  callbacks: {
-    // JWT callback: store and refresh tokens as needed.
-    async jwt({ token, account }): Promise<JWT> {
-      if (account) {
-        token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
-        token.tokenExpiry = account.expires_at ? account.expires_at * 1000 : undefined;
-      }
+    // --------------------------------------------------
+    // Credentials Provider for Email/Password Login/Signup
+    // --------------------------------------------------
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email", placeholder: "user@example.com" },
+        password: { label: "Password", type: "password" },
+        isSignup: { label: "isSignup", type: "text", placeholder: "true or false" },
+        Name: { label: "Name", type: "text", placeholder: "Your Name" },
+        country: { label: "Country", type: "text", placeholder: "Your Country" },
+        referralCode: {
+          label: "Referral code (optional)",
+          type: "text",
+          placeholder: "Your Referred user code",
+        },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Missing email or password.");
+        }
+        const isSignup = credentials.isSignup === "true";
+        let response = null;
 
+        try {
+          if (isSignup) {
+            // Prepare the registration payload.
+            const dataToSend: RegisterUserSchema = {
+              email: credentials.email,
+              password: credentials.password,
+              Name: credentials.Name || "",
+              method: "normal",
+              country: credentials.country || "",
+              referralCode: credentials.referralCode || "",
+            };
+            // SIGNUP: Call the backend /register endpoint.
+            response = await axios.post<AuthApiResponse>(
+              `${SERVER_API_URL}/register`,
+              dataToSend
+            );
+            if (response.status !== 201) {
+              throw new Error("Sign up failed.");
+            }
+          } else {
+            // LOGIN: Call the backend /login endpoint.
+            response = await axios.post<AuthApiResponse>(`${SERVER_API_URL}/login`, {
+              email: credentials.email,
+              password: credentials.password,
+            });
+            if (response.status !== 200) {
+              throw new Error("Login failed.");
+            }
+          }
+        } catch (error: unknown) {
+          logger.error("Auth provider error:", error as string);
+        }
+
+        if (!response || !response.data) {
+          return null;
+        }
+
+        // Return the user object with tokens.
+        return response.data.user;
+      },
+    }),
+  ],
+
+  // ----------------------------------------------------------------
+  // Callbacks: JWT & Session callbacks to store and refresh tokens.
+  // ----------------------------------------------------------------
+  callbacks: {
+    // JWT callback is invoked on sign in and subsequent token refresh cycles.
+    async jwt({ token, user }): Promise<JWT> {
+      // On initial sign-in, the 'user' object is provided.
+      if (user) {
+        // Merge user data into the token.
+        return { ...token, ...user } as JWT;
+      }
+      // If the token still has a valid access token, return it.
       if (token.accessToken && token.tokenExpiry && Date.now() < token.tokenExpiry) {
         return token;
       }
-
+      // Otherwise, try to refresh the access token using the refresh token.
       if (token.refreshToken) {
-        return (await refreshAccessToken(token)) as JWT;
+        return await refreshAccessToken(token);
       }
-
+      // If no valid refresh token is available, include an error.
       return { ...token, error: "NoRefreshTokenAvailable" };
     },
+    // Session callback attaches token details to the session.
+    async session({ session, token }): Promise<typeof session> {
 
-    // Session callback: attach additional user details.
-    async session({ session, token }) {
-      try {
-        const res = await axios.get(
-          `${SERVER_API_URL}/user?email=${session.user?.email}`
-        );
-        const user = res.data as {
-          name?: string;
-          image?: string;
-          email?: string;
-          country?: string;
-          id?: string;
-        };
-
-        session.user = {
-          name: user?.name || "",
-          image: user?.image || "",
-          email: user?.email || "",
-          userId: user?.id?.toString(),
-          accessToken: token.accessToken,
-          refreshToken: token.refreshToken,
-          tokenExpiry: token.tokenExpiry ? new Date(token.tokenExpiry) : undefined,
-        };
-      } catch (error) {
-        logger.error("Error fetching user data:", error as string);
+      if (!token.Name) {
+        return session
       }
-      return session;
-    },
-
-    // Sign-in callback: upsert user data into the database.
-    async signIn({ user, account }) {
-      if (!user.email || !account) return false;
-
-      const dataToSend: RegisterUserSchema = {
-        Name: user.name || "",
-        image: user.image || "",
-        email: user.email || "",
-        method: "google",
+      // Include the user details in the session.
+      session.user = {
+        id: token.id,
+        Name: token.Name,
+        email: token.email,
+        method: token.method,
+        imgThumbnail: token.image as string | undefined,
+        lastLogin: token.lastLogin,
+      };
+      // Include the token details in the session.
+      session.token = {
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+        tokenExpiry: token.tokenExpiry,
       };
 
-      try {
-        await axios.post(`${SERVER_API_URL}/auth/register`, dataToSend);
-        return true;
-      } catch (error) {
-        logger.error("Error storing user auth data:", error as string);
-        return false;
-      }
+      return session;
     },
   },
-  session: {
-    strategy: "jwt",
-  },
+
+  session: { strategy: "jwt" },
+  jwt: { secret: ENV.JWT_SECRET },
 };
 
 export default NextAuth(authOptions);
