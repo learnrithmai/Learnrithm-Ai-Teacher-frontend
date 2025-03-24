@@ -34,7 +34,7 @@ export interface ChatsByDate {
 export interface Mode {
   id: string;
   name: string;
-  icon: any;
+  icon: React.ComponentType<any>; // Updated to accept React components
 }
 
 export interface FileProcessingRequest {

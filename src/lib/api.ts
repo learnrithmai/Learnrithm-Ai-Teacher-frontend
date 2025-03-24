@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server';
 import { ChatMessage, OpenAIRequestBody } from '@/types/openai';
 import openai, { handleOpenAIError } from '@/lib/openai';
 import { trimConversationHistory, selectAppropriateModel } from '@/lib/tokenManagement';
-import { getCachedResponse, setCachedResponse, generateCacheKey } from '@/lib/cache';
+import { 
+  generateCacheKey, 
+  getCachedResponse, 
+  setCachedResponse 
+} from '@/lib/cache';
 
 // Validate chat request
 export function validateChatRequest(body: any): { isValid: boolean; errorMessage?: string } {
