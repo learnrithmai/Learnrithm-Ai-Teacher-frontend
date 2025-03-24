@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { NextResponse } from 'next/server';
 import { processFileStream } from '@/lib/streamProcessor';
 import { AnalysisResponse } from '@/types/files';
@@ -11,6 +10,9 @@ const ALLOWED_TYPES = [
   'image/jpeg',
   'image/png'
 ];
+
+// This prevents attempts to access the file system during build
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request): Promise<NextResponse<AnalysisResponse>> {
   try {

@@ -3,10 +3,25 @@ import OpenAI from 'openai';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Check if running in a build environment
+const isBuildTime = () => {
+  return typeof window === 'undefined' && 
+    process.env.NODE_ENV === 'production' && 
+    !process.env.NEXT_RUNTIME;
+};
+
+// Initialize OpenAI with mock during build
+const openai = isBuildTime()
+  ? {
+      chat: {
+        completions: {
+          create: async () => ({ choices: [{ message: { content: 'Mock response' } }] })
+        }
+      }
+    } as unknown as OpenAI
+  : new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
 /**
  * Process file stream directly to OpenAI without saving to disk
@@ -17,6 +32,16 @@ export async function processFileStream(
   contentType: string,
   mode: string
 ) {
+  // Return mock data during build time
+  if (isBuildTime()) {
+    console.log('Running in build environment, returning mock data');
+    return {
+      content: "Mock content",
+      summary: "Mock summary for build process",
+      analysisType: 'text' as 'text' | 'vision' | 'data'
+    };
+  }
+
   try {
     // Handle different file types
     if (contentType.startsWith('image/')) {
@@ -48,6 +73,15 @@ async function processImageStream(
   contentType: string,
   mode: string
 ) {
+  // Return mock data during build time
+  if (isBuildTime()) {
+    return {
+      content: "Image content",
+      summary: "Mock image analysis for build process",
+      analysisType: 'vision' as 'text' | 'vision' | 'data'
+    };
+  }
+
   // Convert to Buffer if it's ArrayBuffer
   const buffer = Buffer.isBuffer(fileBuffer) 
     ? fileBuffer 
@@ -100,18 +134,38 @@ async function processPdfStream(
   fileBuffer: Buffer | ArrayBuffer,
   mode: string
 ) {
+  // Return mock data during build time
+  if (isBuildTime()) {
+    return {
+      content: "PDF content",
+      summary: "Mock PDF analysis for build process",
+      analysisType: 'text' as 'text' | 'vision' | 'data'
+    };
+  }
+
   // Convert to Buffer if it's ArrayBuffer
   const buffer = Buffer.isBuffer(fileBuffer) 
     ? fileBuffer 
     : Buffer.from(fileBuffer);
   
-  // Extract text from PDF
-  const pdfData = await pdfParse(buffer);
-  const extractedText = pdfData.text;
-  
-  // Process the extracted text with OpenAI
-  return processExtractedText(extractedText, mode);
+  try {
+    // Extract text from PDF
+    const pdfData = await pdfParse(buffer);
+    const extractedText = pdfData.text;
+    
+    // Process the extracted text with OpenAI
+    return processExtractedText(extractedText, mode);
+  } catch (error) {
+    console.error('Error parsing PDF:', error);
+    return {
+      content: "Error processing PDF",
+      summary: "There was an error processing the PDF file. Please try a different file.",
+      analysisType: 'text'
+    };
+  }
 }
+
+// Rest of your functions remain the same, but add similar build-time checks to processDocxStream and processTextStream:
 
 /**
  * Process DOCX stream by extracting text and analyzing
@@ -120,6 +174,15 @@ async function processDocxStream(
   fileBuffer: Buffer | ArrayBuffer,
   mode: string
 ) {
+  // Return mock data during build time
+  if (isBuildTime()) {
+    return {
+      content: "DOCX content",
+      summary: "Mock DOCX analysis for build process",
+      analysisType: 'text' as 'text' | 'vision' | 'data'
+    };
+  }
+
   // Convert to Buffer if it's ArrayBuffer
   const buffer = Buffer.isBuffer(fileBuffer) 
     ? fileBuffer 
@@ -143,6 +206,15 @@ async function processTextStream(
   fileBuffer: Buffer | ArrayBuffer,
   mode: string
 ) {
+  // Return mock data during build time
+  if (isBuildTime()) {
+    return {
+      content: "Text content",
+      summary: "Mock text analysis for build process",
+      analysisType: 'text' as 'text' | 'vision' | 'data'
+    };
+  }
+
   // Convert to Buffer if it's ArrayBuffer
   const buffer = Buffer.isBuffer(fileBuffer) 
     ? fileBuffer 
@@ -159,6 +231,15 @@ async function processTextStream(
  * Process extracted text content with OpenAI
  */
 async function processExtractedText(text: string, mode: string) {
+  // Return mock data during build time
+  if (isBuildTime()) {
+    return {
+      content: text.substring(0, 100) + "...",
+      summary: "Mock analysis for build process",
+      analysisType: 'text' as 'text' | 'vision' | 'data'
+    };
+  }
+
   // Get appropriate system prompt for the mode
   const systemPrompt = getSystemPromptForMode(mode);
   
