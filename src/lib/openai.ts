@@ -1,41 +1,10 @@
 import OpenAI from 'openai';
 
-// Initialize OpenAI client with better build-time handling
-let openai: OpenAI;
-
-// More robust check for build time or missing API key
-if (
-  process.env.NEXT_PHASE === 'phase-production-build' || 
-  process.env.NODE_ENV === 'test' ||
-  !process.env.OPENAI_API_KEY
-) {
-  console.log('Using mock OpenAI client - no API key or build environment detected');
-  // Mock client for build process with more complete interface
-  openai = {
-    chat: {
-      completions: {
-        create: async () => ({
-          id: 'mock-id',
-          choices: [{ message: { content: 'Mock response' } }],
-          created: Date.now(),
-          model: 'mock-model',
-        }),
-      },
-    },
-    embeddings: {
-      create: async () => ({
-        data: [{ embedding: new Array(1536).fill(0) }],
-        model: 'mock-embedding-model',
-      }),
-    },
-    // Add other OpenAI API methods you use
-  } as unknown as OpenAI;
-} else {
-  // Normal initialization for runtime
-  openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || 'sk-mock-key',
-  });
-}
+// Initialize OpenAI client directly
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  dangerouslyAllowBrowser: false, // Ensure server-side only usage
+});
 
 export default openai;
 
@@ -55,6 +24,12 @@ export function handleOpenAIError(error: any): { message: string; status: number
     return {
       message: 'No response received from OpenAI API',
       status: 503
+    };
+  } else if (error.cause && error.cause.code === 'ERR_SSL_PACKET_LENGTH_TOO_LONG') {
+    // Handle the specific SSL error you're seeing
+    return {
+      message: 'SSL connection error when connecting to OpenAI API',
+      status: 502
     };
   } else {
     // Something happened in setting up the request
