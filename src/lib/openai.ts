@@ -22,7 +22,7 @@ if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-p
 } else {
   // Normal initialization for runtime
   openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || 'sk-placeholder-for-build-process',
+    apiKey: process.env.OPENAI_API_KEY,
   });
 }
 

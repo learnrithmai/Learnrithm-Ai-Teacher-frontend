@@ -1,9 +1,0 @@
-[Image detected: a2cf7b07-e81d-454c-a983-bc76f974e940.png
-    Type: png
-    Dimensions: 1414×2000 pixels
-    Size: 358 KB
-    
-    Note: For text extraction from images, consider implementing one of these options:
-    1. Cloud-based OCR service (Google Vision API, Azure Computer Vision)
-    2. Browser-based solution (e.g., Tesseract.js with proper web worker configuration)
-    3. Server-side OCR with dedicated library]
