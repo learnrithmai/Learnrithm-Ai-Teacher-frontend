@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { NextResponse } from 'next/server';
 import { OpenAIRequestBody } from '@/types/openai';
 import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
