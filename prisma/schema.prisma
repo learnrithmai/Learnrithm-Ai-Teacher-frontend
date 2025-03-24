@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Course {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model Game {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model Notifier {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  email  Json?  @unique
+  /// Field referred in an index, but found no data to define the type.
+  userId Json?  @unique
+}
+
+model Question {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model Streaker {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  email  Json?  @unique
+  /// Field referred in an index, but found no data to define the type.
+  userId Json?  @unique
+}
+
+model Token {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  tokenType Json?
+  /// Field referred in an index, but found no data to define the type.
+  userId    Json?
+
+  @@unique([userId, tokenType])
+}
+
+model TopicCount {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  topic Json?  @unique
+}
+
+model Transaction {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  email Json?  @unique
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  Name         String
+  country      String
+  createdAt    DateTime @db.Date
+  email        String   @unique
+  imgThumbnail String
+  isVerified   Boolean
+  lastLogin    DateTime @db.Date
+  method       String
+  /// Could not determine type: the field only had null or empty values in the sample set.
+  password     Json?
+  plan         String
+}
+
+model referralCode {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  code Json?  @unique
+}
+
+model userReferredBy {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  email  Json?  @unique
+  /// Field referred in an index, but found no data to define the type.
+  userId Json?  @unique
+}

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "@/types/chat";
 import { Message as MessageComponent } from "./Message";
+import { useEffect, useRef } from "react";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -20,9 +21,25 @@ export function ChatMessages({
   isFeedbackVisible,
   onToggleFeedback,
 }: ChatMessagesProps) {
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollAreaRef.current && containerRef.current) {
+      const scrollContainer = scrollAreaRef.current;
+      setTimeout(() => {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }, 100);
+    }
+  }, [messages, isLoading]);
+
   return (
-    <ScrollArea className="flex-1">
-      <div className="max-w-4xl mx-auto">
+    <div 
+      ref={scrollAreaRef}
+      className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent" 
+    >
+      <div ref={containerRef} className="max-w-4xl mx-auto">
         <AnimatePresence>
           {/* Dynamic Messages */}
           {messages.map((message) => (
@@ -53,6 +70,6 @@ export function ChatMessages({
           )}
         </AnimatePresence>
       </div>
-    </ScrollArea>
+    </div>
   );
 }
