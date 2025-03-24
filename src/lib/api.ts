@@ -117,3 +117,29 @@ export async function processChatRequest(
     );
   }
 }
+
+// Get usage statistics for admin dashboard
+export async function getUsageStats() {
+  // This is a placeholder implementation
+  // You would typically fetch this data from your database or another source
+  
+  return {
+    totalRequests: 1250,
+    uniqueUsers: 45,
+    averageResponseTime: 850, // milliseconds
+    errorRate: 0.02, // 2%
+    mostPopularModels: [
+      { name: 'gpt-3.5-turbo', usage: 850 },
+      { name: 'gpt-4', usage: 400 }
+    ],
+    dailyUsage: [
+      { date: '2025-03-17', requests: 150 },
+      { date: '2025-03-18', requests: 175 },
+      { date: '2025-03-19', requests: 125 },
+      { date: '2025-03-20', requests: 200 },
+      { date: '2025-03-21', requests: 190 },
+      { date: '2025-03-22', requests: 210 },
+      { date: '2025-03-23', requests: 200 }
+    ]
+  };
+}
