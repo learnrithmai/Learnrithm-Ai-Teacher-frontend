@@ -40,58 +40,18 @@ export function ChatInput({
     }
   };
 
-  // Enhanced file upload handler with streaming processing
+  // Enhanced file upload handler without immediate processing
+  // We'll process the files with the user prompt when they hit send
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setFileError(null);
     
     // Standard file handling that adds files to preview
     onFileChange(e);
-    
-    // Process files with streaming API if we have the callback
-    if (onFileAnalysisComplete && e.target.files?.length) {
-      const files = Array.from(e.target.files);
-      
-      // Process each file sequentially
-      for (const file of files) {
-        try {
-          // Add file to processing state
-          setProcessingFiles(prev => [...prev, file.name]);
-          
-          // Create form data for this file
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('mode', activeMode || 'study');
-          
-          // Call the streaming API endpoint
-          const response = await fetch('/api/analyze', {
-            method: 'POST',
-            body: formData,
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to analyze file');
-          }
-          
-          // Process successful response
-          const data = await response.json();
-          
-          // Find the file ID that matches this filename in our file preview
-          // This ensures we use the correct ID that was assigned during onFileChange
-          const matchingFile = filePreview.find(f => f.name === file.name);
-          if (matchingFile && data.success && data.analysisResult) {
-            onFileAnalysisComplete(matchingFile.id, data.analysisResult);
-          }
-        } catch (error) {
-          console.error('Error processing file:', error);
-          setFileError(error instanceof Error ? error.message : 'Error analyzing file');
-        } finally {
-          // Remove file from processing state
-          setProcessingFiles(prev => prev.filter(name => name !== file.name));
-        }
-      }
-    }
   };
+
+  const inputPlaceholder = filePreview.length > 0 
+    ? "Add instructions for analyzing the document..." 
+    : "Ask anything";
 
   return (
     <div className="border-t border-gray-200 p-4">
@@ -154,7 +114,7 @@ export function ChatInput({
             )}
           </Button>
           <Input
-            placeholder="Ask anything"
+            placeholder={inputPlaceholder}
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSend()}
@@ -179,11 +139,11 @@ export function ChatInput({
                 variant="outline"
                 size="sm"
                 className={`rounded-full flex items-center gap-1 text-xs border transition-colors ${
-                  activeMode === mode.id  // Changed from mode.name to mode.id
+                  activeMode === mode.id
                     ? "bg-black text-white border-black" 
                     : "bg-transparent text-gray-700 border-gray-300"
                 }`}
-                onClick={() => onModeSelect(mode.id)}  // Changed from mode.name to mode.id
+                onClick={() => onModeSelect(mode.id)}
               >
                 <Icon size={14} />
                 <span>{mode.name}</span>

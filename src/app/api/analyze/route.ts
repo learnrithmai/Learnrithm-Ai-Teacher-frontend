@@ -24,6 +24,7 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
       const mode = formData.get('mode') as string || 'study';
+      const prompt = formData.get('prompt') as string || '';
 
       if (!file) {
         return NextResponse.json(
@@ -43,11 +44,17 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
       // Get file data as array buffer and process directly
       const fileArrayBuffer = await file.arrayBuffer();
       
+      // If user provided a specific prompt, use it to guide the analysis
+      let effectiveMode = mode;
+      if (prompt) {
+        effectiveMode = `${mode} with additional instructions: ${prompt}`;
+      }
+      
       const analysisResult = await processFileStream(
         fileArrayBuffer,
         file.name,
         file.type,
-        mode
+        effectiveMode // Pass the enhanced mode with user prompt if provided
       );
 
       // Ensure analysisType is one of the allowed types
@@ -67,7 +74,7 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
     }
     // Handle JSON
     else if (contentType.includes('application/json')) {
-      const { text, mode = 'study' } = await request.json();
+      const { text, mode = 'study', prompt = '' } = await request.json();
       
       if (!text) {
         return NextResponse.json(
@@ -78,11 +85,18 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
       
       // Process text directly
       const buffer = Buffer.from(text);
+      
+      // If user provided a specific prompt, use it to guide the analysis
+      let effectiveMode = mode;
+      if (prompt) {
+        effectiveMode = `${mode} with additional instructions: ${prompt}`;
+      }
+      
       const analysisResult = await processFileStream(
         buffer,
         'text-input.txt',
         'text/plain',
-        mode
+        effectiveMode
       );
       
       return NextResponse.json({

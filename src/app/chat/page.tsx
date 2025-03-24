@@ -18,9 +18,10 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFeedbackVisible, setIsFeedbackVisible] = useState(false);
   const [currentFeedbackId, setCurrentFeedbackId] = useState<string | null>(null);
-  const [activeMode, setActiveMode] = useState<string>("study"); // Default mode is study (lowercase ID)
+  const [activeMode, setActiveMode] = useState<string>("study"); // Default mode is study
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filePreview, setFilePreview] = useState<FilePreview[]>([]);
+  const [currentFiles, setCurrentFiles] = useState<File[]>([]);
 
   const modes: Mode[] = [
     { id: "study", name: "Study", icon: BookOpen },
@@ -31,42 +32,15 @@ export default function Home() {
 
   const chatsByDate = groupChatsByDate(chats);
 
-  // New handler for file analysis completion
+  // Handle file analysis completion
   const handleFileAnalysisComplete = (fileId: string, analysis: any) => {
-    // Add the required analysisType if it's missing
-    const enhancedAnalysis = {
-      ...analysis,
-      analysisType: analysis.analysisType || 'text' // Default to text if missing
-    };
-    
-    // Update the file preview with analysis data
     setFilePreview(prev => 
       prev.map(file => 
         file.id === fileId 
-          ? { ...file, analysis: { ...enhancedAnalysis, details: "" } } 
+          ? { ...file, analysis: { summary: analysis.summary, details: analysis.content || "" } } 
           : file
       )
     );
-    
-    // Add a system message showing the analysis result
-    const analysisMessage: Message = {
-      id: `analysis-${fileId}`,
-      content: `📄 **File Analysis**: ${analysis.summary}`,
-      role: "assistant",
-      timestamp: new Date(),
-      chatId: currentChatId || ''
-    };
-    
-    setMessages(prev => [...prev, analysisMessage]);
-    
-    // If we have a current chat, update its messages too
-    if (currentChatId) {
-      setChats(prev => prev.map(chat => 
-        chat.id === currentChatId 
-          ? { ...chat, messages: [...chat.messages, analysisMessage] } 
-          : chat
-      ));
-    }
   };
 
   const createNewChat = () => {
@@ -83,16 +57,81 @@ export default function Home() {
     return newChatId;
   };
 
+  // Process files with user prompt
+  const processFilesWithPrompt = async (files: FilePreview[], prompt: string, mode: string) => {
+    setIsLoading(true);
+    
+    try {
+      // Find the actual file objects that match the previews
+      const actualFiles = currentFiles.filter(file => 
+        files.some(preview => preview.name === file.name)
+      );
+      
+      if (actualFiles.length === 0) {
+        throw new Error("No files found to process");
+      }
+      
+      const results: Array<{ filename: string } & AnalysisResult> = [];
+      
+      // Process each file sequentially
+      for (const file of actualFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('mode', mode);
+        
+        if (prompt) {
+          // If we have a prompt, add it to guide the analysis
+          formData.append('prompt', prompt);
+        }
+        
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to analyze file');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.analysisResult) {
+          results.push({
+            filename: file.name,
+            ...data.analysisResult
+          });
+          
+          // Update the file preview with analysis
+          const matchingPreview = files.find(f => f.name === file.name);
+          if (matchingPreview) {
+            handleFileAnalysisComplete(matchingPreview.id, data.analysisResult);
+          }
+        }
+      }
+      
+      return results;
+    } catch (error) {
+      console.error("Error processing files:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() && filePreview.length === 0) return;
 
     const chatId = currentChatId || createNewChat();
+    const hasFiles = filePreview.length > 0;
+    
+    // Create user message
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input,
+      content: input || (hasFiles ? "Please analyze these files" : ""),
       role: "user",
       timestamp: new Date(),
-      files: filePreview.length > 0 ? [...filePreview] : undefined,
+      files: hasFiles ? [...filePreview] : undefined,
       chatId
     };
 
@@ -113,39 +152,65 @@ export default function Home() {
     }));
     
     setInput("");
-    setFilePreview([]);
     setIsLoading(true);
 
     try {
-      // Format messages for API request
-      const apiMessages = updatedMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      let aiResponse = "";
+      
+      // If there are files, process them with the user's prompt
+      if (hasFiles) {
+        const fileResults = await processFilesWithPrompt(
+          filePreview,
+          input, // User's prompt/instructions for the file analysis
+          activeMode
+        );
+        
+        // Combine results into a single response
+        if (fileResults && fileResults.length > 0) {
+          aiResponse = fileResults.map(result => {
+            return `**Analysis of ${result.filename}:**\n\n${result.summary}`;
+          }).join("\n\n");
+        } else {
+          aiResponse = "I couldn't analyze the files. Please try again with different files or instructions.";
+        }
+        
+        // Clear the file previews after processing
+        setFilePreview([]);
+        setCurrentFiles([]);
+      } 
+      // Otherwise, handle as a regular chat message
+      else {
+        // Format messages for API request
+        const apiMessages = updatedMessages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
 
-      // Call the API with the selected mode
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messages: apiMessages,
-          mode: activeMode,  // This is now properly the lowercase ID
-          max_tokens: 1500
-        })
-      });
+        // Call the API with the selected mode
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            messages: apiMessages,
+            mode: activeMode,
+            max_tokens: 1500
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        aiResponse = data.content || "I couldn't generate a response. Please try again.";
       }
-
-      const data = await response.json();
       
       // Create AI message from response
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.content || "I couldn't generate a response. Please try again.",
+        content: aiResponse,
         role: "assistant",
         timestamp: new Date(),
         chatId
@@ -156,8 +221,9 @@ export default function Home() {
       setChats(prev => prev.map(chat => 
         chat.id === chatId ? { ...chat, messages: newMessages } : chat
       ));
+      
     } catch (error) {
-      console.error("Error calling API:", error);
+      console.error("Error processing request:", error);
       
       // Add error message
       const errorMessage: Message = {
@@ -183,6 +249,9 @@ export default function Home() {
       setMessages(chat.messages);
       setCurrentChatId(chatId);
       setSidebarOpen(false);
+      // Clear file previews when switching chats
+      setFilePreview([]);
+      setCurrentFiles([]);
     }
   };
 
@@ -199,6 +268,10 @@ export default function Home() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
+      // Store actual file objects
+      setCurrentFiles(prevFiles => [...prevFiles, ...Array.from(files)]);
+      
+      // Create preview objects
       const newFilePreviews = Array.from(files).map(file => ({
         id: Date.now() + Math.random().toString(),
         name: file.name,
@@ -211,7 +284,16 @@ export default function Home() {
   };
 
   const removeFile = (fileId: string) => {
+    // Get the file name before removing it
+    const fileToRemove = filePreview.find(file => file.id === fileId);
+    
+    // Remove from preview
     setFilePreview(prev => prev.filter(file => file.id !== fileId));
+    
+    // Remove the actual file
+    if (fileToRemove) {
+      setCurrentFiles(prev => prev.filter(file => file.name !== fileToRemove.name));
+    }
   };
 
   return (
