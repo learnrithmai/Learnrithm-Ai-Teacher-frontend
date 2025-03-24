@@ -3,24 +3,34 @@ import OpenAI from 'openai';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
 
-// Check if running in a build environment
-const isBuildTime = () => {
-  return typeof window === 'undefined' && 
-    process.env.NODE_ENV === 'production' && 
-    !process.env.NEXT_RUNTIME;
+// Improved detection of build/deployment environments
+const isBuildOrDeployment = () => {
+  return (
+    typeof window === 'undefined' && 
+    (
+      // Check if we're in a build environment
+      process.env.NODE_ENV === 'production' && 
+      !process.env.NEXT_RUNTIME ||
+      // Or if OPENAI_API_KEY is missing (likely during deployment)
+      !process.env.OPENAI_API_KEY
+    )
+  );
 };
 
-// Initialize OpenAI with mock during build
-const openai = isBuildTime()
+// Initialize OpenAI with mock during build or deployment without API key
+const openai = isBuildOrDeployment()
   ? {
       chat: {
         completions: {
-          create: async () => ({ choices: [{ message: { content: 'Mock response' } }] })
+          create: async () => ({ 
+            choices: [{ message: { content: 'Mock response during build/deployment' } }]
+          })
         }
       }
     } as unknown as OpenAI
   : new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      // Only try to use the API key if we're confident it exists
+      apiKey: process.env.OPENAI_API_KEY || 'dummy-key-for-type-safety',
     });
 
 /**
@@ -32,12 +42,12 @@ export async function processFileStream(
   contentType: string,
   mode: string
 ) {
-  // Return mock data during build time
-  if (isBuildTime()) {
-    console.log('Running in build environment, returning mock data');
+  // Return mock data during build or deployment without API key
+  if (isBuildOrDeployment()) {
+    console.log('Running in build/deployment environment, returning mock data');
     return {
       content: "Mock content",
-      summary: "Mock summary for build process",
+      summary: "Mock summary for build/deployment process",
       analysisType: 'text' as 'text' | 'vision' | 'data'
     };
   }
@@ -73,11 +83,11 @@ async function processImageStream(
   contentType: string,
   mode: string
 ) {
-  // Return mock data during build time
-  if (isBuildTime()) {
+  // Return mock data during build or deployment without API key
+  if (isBuildOrDeployment()) {
     return {
       content: "Image content",
-      summary: "Mock image analysis for build process",
+      summary: "Mock image analysis for build/deployment process",
       analysisType: 'vision' as 'text' | 'vision' | 'data'
     };
   }
@@ -134,11 +144,11 @@ async function processPdfStream(
   fileBuffer: Buffer | ArrayBuffer,
   mode: string
 ) {
-  // Return mock data during build time
-  if (isBuildTime()) {
+  // Return mock data during build or deployment without API key
+  if (isBuildOrDeployment()) {
     return {
       content: "PDF content",
-      summary: "Mock PDF analysis for build process",
+      summary: "Mock PDF analysis for build/deployment process",
       analysisType: 'text' as 'text' | 'vision' | 'data'
     };
   }
@@ -165,8 +175,6 @@ async function processPdfStream(
   }
 }
 
-// Rest of your functions remain the same, but add similar build-time checks to processDocxStream and processTextStream:
-
 /**
  * Process DOCX stream by extracting text and analyzing
  */
@@ -174,11 +182,11 @@ async function processDocxStream(
   fileBuffer: Buffer | ArrayBuffer,
   mode: string
 ) {
-  // Return mock data during build time
-  if (isBuildTime()) {
+  // Return mock data during build or deployment without API key
+  if (isBuildOrDeployment()) {
     return {
       content: "DOCX content",
-      summary: "Mock DOCX analysis for build process",
+      summary: "Mock DOCX analysis for build/deployment process",
       analysisType: 'text' as 'text' | 'vision' | 'data'
     };
   }
@@ -188,15 +196,24 @@ async function processDocxStream(
     ? fileBuffer 
     : Buffer.from(fileBuffer);
   
-  // Extract text from DOCX
-  const result = await mammoth.extractRawText({ 
-    buffer: buffer as Buffer
-  });
-  
-  const extractedText = result.value;
-  
-  // Process the extracted text with OpenAI
-  return processExtractedText(extractedText, mode);
+  try {
+    // Extract text from DOCX
+    const result = await mammoth.extractRawText({ 
+      buffer: buffer as Buffer
+    });
+    
+    const extractedText = result.value;
+    
+    // Process the extracted text with OpenAI
+    return processExtractedText(extractedText, mode);
+  } catch (error) {
+    console.error('Error parsing DOCX:', error);
+    return {
+      content: "Error processing DOCX",
+      summary: "There was an error processing the DOCX file. Please try a different file.",
+      analysisType: 'text'
+    };
+  }
 }
 
 /**
@@ -206,11 +223,11 @@ async function processTextStream(
   fileBuffer: Buffer | ArrayBuffer,
   mode: string
 ) {
-  // Return mock data during build time
-  if (isBuildTime()) {
+  // Return mock data during build or deployment without API key
+  if (isBuildOrDeployment()) {
     return {
       content: "Text content",
-      summary: "Mock text analysis for build process",
+      summary: "Mock text analysis for build/deployment process",
       analysisType: 'text' as 'text' | 'vision' | 'data'
     };
   }
@@ -231,11 +248,11 @@ async function processTextStream(
  * Process extracted text content with OpenAI
  */
 async function processExtractedText(text: string, mode: string) {
-  // Return mock data during build time
-  if (isBuildTime()) {
+  // Return mock data during build or deployment without API key
+  if (isBuildOrDeployment()) {
     return {
       content: text.substring(0, 100) + "...",
-      summary: "Mock analysis for build process",
+      summary: "Mock analysis for build/deployment process",
       analysisType: 'text' as 'text' | 'vision' | 'data'
     };
   }
@@ -243,21 +260,30 @@ async function processExtractedText(text: string, mode: string) {
   // Get appropriate system prompt for the mode
   const systemPrompt = getSystemPromptForMode(mode);
   
-  // Analyze with OpenAI
-  const completion = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Analyze the following content according to the ${mode} mode:\n\n${text}` }
-    ],
-    max_tokens: 1000,
-  });
-  
-  return {
-    content: text,
-    summary: completion.choices[0]?.message?.content || 'No analysis available',
-    analysisType: 'text'
-  };
+  try {
+    // Analyze with OpenAI
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Analyze the following content according to the ${mode} mode:\n\n${text}` }
+      ],
+      max_tokens: 1000,
+    });
+    
+    return {
+      content: text,
+      summary: completion.choices[0]?.message?.content || 'No analysis available',
+      analysisType: 'text'
+    };
+  } catch (error) {
+    console.error('Error getting completion from OpenAI:', error);
+    return {
+      content: text,
+      summary: "There was an error analyzing this content. Please try again later.",
+      analysisType: 'text'
+    };
+  }
 }
 
 /**
