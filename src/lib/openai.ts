@@ -3,26 +3,37 @@ import OpenAI from 'openai';
 // Initialize OpenAI client with better build-time handling
 let openai: OpenAI;
 
-// During build time or when testing, use a placeholder client
-if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
-  console.log('Building application - using mock OpenAI client');
-  // Mock client for build process
+// More robust check for build time or missing API key
+if (
+  process.env.NEXT_PHASE === 'phase-production-build' || 
+  process.env.NODE_ENV === 'test' ||
+  !process.env.OPENAI_API_KEY
+) {
+  console.log('Using mock OpenAI client - no API key or build environment detected');
+  // Mock client for build process with more complete interface
   openai = {
     chat: {
       completions: {
         create: async () => ({
           id: 'mock-id',
-          choices: [{ message: { content: 'Build-time placeholder' } }],
+          choices: [{ message: { content: 'Mock response' } }],
           created: Date.now(),
           model: 'mock-model',
         }),
       },
     },
+    embeddings: {
+      create: async () => ({
+        data: [{ embedding: new Array(1536).fill(0) }],
+        model: 'mock-embedding-model',
+      }),
+    },
+    // Add other OpenAI API methods you use
   } as unknown as OpenAI;
 } else {
   // Normal initialization for runtime
   openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY || 'sk-mock-key',
   });
 }
 

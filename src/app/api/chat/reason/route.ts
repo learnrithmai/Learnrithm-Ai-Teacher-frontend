@@ -1,7 +1,9 @@
+
 import { NextResponse } from 'next/server';
 import { OpenAIRequestBody } from '@/types/openai';
 import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 import { trimConversationHistory, selectAppropriateModel } from '@/lib/tokenManagement';
+export const runtime = 'edge';
 
 export async function POST(request: Request) {
   try {

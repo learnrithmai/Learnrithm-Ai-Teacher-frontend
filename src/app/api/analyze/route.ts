@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { NextResponse } from 'next/server';
 import { processFileStream } from '@/lib/streamProcessor';
 import { AnalysisResponse } from '@/types/files';
