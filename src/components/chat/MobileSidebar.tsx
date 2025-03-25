@@ -1,10 +1,20 @@
 "use client";
 
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import * as React from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Menu, MessageSquare, Plus, Settings } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Menu, Plus, Settings } from "lucide-react";
 import { ChatsByDate } from "@/types/chat";
+import Image from "next/image";
+import logoImage from "./logo.png";
 
 interface MobileSidebarProps {
   chatsByDate: ChatsByDate;
@@ -15,13 +25,13 @@ interface MobileSidebarProps {
   onSelectChat: (chatId: string) => void;
 }
 
-export function MobileSidebar({ 
-  chatsByDate, 
-  currentChatId, 
-  sidebarOpen, 
-  setSidebarOpen, 
-  onCreateNewChat, 
-  onSelectChat 
+export function MobileSidebar({
+  chatsByDate,
+  currentChatId,
+  sidebarOpen,
+  setSidebarOpen,
+  onCreateNewChat,
+  onSelectChat,
 }: MobileSidebarProps) {
   return (
     <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -29,17 +39,37 @@ export function MobileSidebar({
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden absolute left-4 top-4 text-black z-10"
+          className="md:hidden absolute left-4 top-4 z-10"
         >
           <Menu size={24} />
+          <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[260px] p-0 bg-white border-gray-200">
+      <SheetContent
+        side="left"
+        className="w-[260px] p-0 border-r"
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>Navigation Menu</SheetTitle>
+        </SheetHeader>
+        
         <div className="flex flex-col h-full">
-          <div className="p-2">
+          <div className="p-4 flex justify-center items-center border-b">
+            <Image 
+              src={logoImage} 
+              alt="Learnrithm Logo" 
+              width={144}
+              height={36}
+              className="h-9 w-auto"
+              priority
+            />
+          </div>
+
+          <div className="p-3 border-b">
             <Button
               variant="outline"
-              className="w-full justify-start gap-2 bg-white text-black border-gray-300 hover:bg-gray-50"
+              size="sm"
+              className="w-full justify-start gap-2"
               onClick={() => {
                 onCreateNewChat();
                 setSidebarOpen(false);
@@ -49,62 +79,63 @@ export function MobileSidebar({
               New chat
             </Button>
           </div>
-          <ScrollArea className="flex-1">
-            <div className="space-y-4 p-2">
-              <div className="space-y-1">
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start gap-2 text-gray-700 hover:bg-gray-200"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  All Chats
-                </Button>
-              </div>
-              
-              {Object.keys(chatsByDate).map((dateLabel) => (
-                <div key={dateLabel}>
-                  <div className="text-xs text-gray-500 font-medium px-2 py-1">{dateLabel}</div>
-                  <div className="space-y-1">
-                    {chatsByDate[dateLabel].map((chat) => (
-                      <Button 
-                        key={chat.id}
-                        variant="ghost" 
-                        className={`w-full justify-between group text-gray-700 hover:bg-gray-200 ${currentChatId === chat.id ? 'bg-gray-200' : ''}`}
-                        onClick={() => onSelectChat(chat.id)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <MessageSquare size={14} />
-                          <span className="truncate text-sm text-left">
-                            {chat.title || "New chat"}
-                          </span>
-                        </div>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              
-              {Object.keys(chatsByDate).length === 0 && (
+
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-3 space-y-4">
                 <div>
-                  <div className="text-xs text-gray-500 font-medium px-2 py-1">Today</div>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-between group text-gray-700 hover:bg-gray-200"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare size={14} />
-                      <span className="truncate text-sm">Hi there summary</span>
-                    </div>
-                  </Button>
+                  <p className="px-2 py-1 text-sm font-medium text-gray-700">All chats</p>
+                  <Separator className="my-1" />
                 </div>
-              )}
-            </div>
-          </ScrollArea>
-          <div className="p-2 border-t border-gray-200">
-            <Button variant="ghost" className="w-full justify-start gap-2 text-gray-700 hover:bg-gray-200">
-              <Settings size={16} />
+                
+                {Object.keys(chatsByDate).map((dateLabel) => (
+                  <div key={dateLabel}>
+                    <p className="px-2 py-1 text-xs text-gray-500">{dateLabel}</p>
+                    <div className="mt-1 space-y-1">
+                      {chatsByDate[dateLabel].map((chat) => (
+                        <Button
+                          key={chat.id}
+                          variant="ghost"
+                          size="sm"
+                          className={`w-full justify-start text-left font-normal h-auto py-2 ${
+                            currentChatId === chat.id ? "bg-gray-100" : ""
+                          }`}
+                          onClick={() => {
+                            onSelectChat(chat.id);
+                            setSidebarOpen(false);
+                          }}
+                        >
+                          <span className="truncate">{chat.title || "New chat"}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {Object.keys(chatsByDate).length === 0 && (
+                  <div>
+                    <p className="px-2 py-1 text-xs text-gray-500">Today</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-left font-normal h-auto py-2"
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <span className="truncate">Hi there summary</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <div className="p-3 border-t">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-left font-normal"
+            >
+              <Settings className="mr-2 h-4 w-4" />
               Settings
             </Button>
           </div>

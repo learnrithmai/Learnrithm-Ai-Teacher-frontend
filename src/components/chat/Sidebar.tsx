@@ -1,12 +1,20 @@
 "use client";
 
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Avatar } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MessageSquare, Plus, Settings, Share2, MoreHorizontal } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Settings, Share2, LogOut } from "lucide-react";
 import { ChatsByDate } from "@/types/chat";
+import Image from "next/image";
+import logoImage from "./logo.png";
 
 interface SidebarProps {
   chatsByDate: ChatsByDate;
@@ -17,11 +25,23 @@ interface SidebarProps {
 
 export function Sidebar({ chatsByDate, currentChatId, onCreateNewChat, onSelectChat }: SidebarProps) {
   return (
-    <aside className="hidden md:flex w-[260px] flex-col bg-gray-100 text-black border-r border-gray-200">
-      <div className="p-2">
+    <div className="hidden md:flex h-full w-[260px] flex-col bg-gray-50 border-r border-gray-200">
+      <div className="p-4 flex justify-center items-center">
+        <Image 
+          src={logoImage} 
+          alt="Learnrithm Logo" 
+          width={144}
+          height={36}
+          className="h-9 w-auto"
+          priority
+        />
+      </div>
+
+      <div className="px-3 pb-2">
         <Button
           variant="outline"
-          className="w-full justify-start gap-2 bg-white text-black border-gray-300 hover:bg-gray-50"
+          size="sm"
+          className="w-full justify-start gap-2 bg-white hover:bg-gray-50"
           onClick={onCreateNewChat}
         >
           <Plus size={16} />
@@ -29,93 +49,110 @@ export function Sidebar({ chatsByDate, currentChatId, onCreateNewChat, onSelectC
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 px-2">
-        <div className="space-y-4 py-2">
-          <div className="space-y-1">
-            <Button variant="ghost" className="w-full justify-start gap-2 text-gray-700 hover:bg-gray-200">
-              <MessageSquare className="h-4 w-4" />
-              All Chats
-            </Button>
-          </div>
-          <Separator className="bg-gray-300" />
-          
-          {Object.keys(chatsByDate).map((dateLabel) => (
-            <div key={dateLabel}>
-              <div className="text-xs text-gray-500 font-medium px-2 py-1">{dateLabel}</div>
-              <div className="space-y-1">
-                {chatsByDate[dateLabel].map((chat) => (
-                  <Button 
-                    key={chat.id}
-                    variant="ghost" 
-                    className={`w-full justify-between group text-gray-700 hover:bg-gray-200 ${currentChatId === chat.id ? 'bg-gray-200' : ''}`}
-                    onClick={() => onSelectChat(chat.id)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare size={14} />
-                      <span className="truncate text-sm text-left">
-                        {chat.title || "New chat"}
-                      </span>
-                    </div>
-                    <MoreHorizontal size={14} className="opacity-0 group-hover:opacity-100" />
-                  </Button>
-                ))}
-              </div>
+      <nav className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full px-2">
+          <div className="space-y-2 py-2">
+            <div className="px-3 py-2 opacity-70">
+              <p className="text-sm font-medium">All chats</p>
             </div>
-          ))}
-
-          {Object.keys(chatsByDate).length === 0 && (
-            <>
-              <div>
-                <div className="text-xs text-gray-500 font-medium px-2 py-1">Today</div>
-                <Button variant="ghost" className="w-full justify-between group text-gray-700 hover:bg-gray-200 bg-gray-200">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare size={14} />
-                    <span className="truncate text-sm text-left">UI Breakdown</span>
-                  </div>
-                  <MoreHorizontal size={14} className="opacity-0 group-hover:opacity-100" />
-                </Button>
+            <Separator className="my-1" />
+            
+            {Object.keys(chatsByDate).map((dateLabel) => (
+              <div key={dateLabel} className="mt-4">
+                <div className="px-3 py-1">
+                  <p className="text-xs text-gray-500">{dateLabel}</p>
+                </div>
+                <div className="mt-1 space-y-1">
+                  {chatsByDate[dateLabel].map((chat) => (
+                    <Button
+                      key={chat.id}
+                      variant="ghost"
+                      size="sm"
+                      className={`w-full justify-start text-left font-normal h-auto py-2 ${
+                        currentChatId === chat.id ? "bg-gray-100" : ""
+                      }`}
+                      onClick={() => onSelectChat(chat.id)}
+                    >
+                      <span className="truncate">{chat.title || "New chat"}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <div className="text-xs text-gray-500 font-medium px-2 py-1">Yesterday</div>
-                <Button variant="ghost" className="w-full justify-between group text-gray-700 hover:bg-gray-200">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare size={14} />
-                    <span className="truncate text-sm">Previous chat</span>
-                  </div>
-                  <MoreHorizontal size={14} className="opacity-0 group-hover:opacity-100" />
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </ScrollArea>
+            ))}
 
-      <div className="p-2 space-y-2 border-t border-gray-200">
-        <Button variant="ghost" className="w-full justify-start gap-2 text-gray-700 hover:bg-gray-200">
-          <Settings size={16} />
+            {Object.keys(chatsByDate).length === 0 && (
+              <>
+                <div className="mt-4">
+                  <div className="px-3 py-1">
+                    <p className="text-xs text-gray-500">Today</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-left font-normal bg-gray-100 h-auto py-2"
+                  >
+                    <span className="truncate">UI Breakdown</span>
+                  </Button>
+                </div>
+                <div className="mt-4">
+                  <div className="px-3 py-1">
+                    <p className="text-xs text-gray-500">Yesterday</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-left font-normal h-auto py-2"
+                  >
+                    <span className="truncate">Previous chat</span>
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </ScrollArea>
+      </nav>
+
+      <div className="p-4 border-t border-gray-200">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start mb-2 text-left font-normal"
+        >
+          <Settings className="mr-2 h-4 w-4" />
           Settings
         </Button>
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between text-gray-700 hover:bg-gray-200">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6 bg-gray-300" />
-                <span className="text-sm">User Account</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-between items-center text-left font-normal"
+            >
+              <div className="flex items-center">
+                <Avatar className="h-5 w-5 mr-2">
+                  <AvatarFallback className="text-xs">U</AvatarFallback>
+                </Avatar>
+                <span>User Account</span>
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
-            <DropdownMenuItem className="text-gray-700 focus:bg-gray-100 focus:text-gray-900">
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-gray-700 focus:bg-gray-100 focus:text-gray-900">
+            <DropdownMenuItem>
               <Share2 className="mr-2 h-4 w-4" />
               <span>Share</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </aside>
+    </div>
   );
 }

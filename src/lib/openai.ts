@@ -1,8 +1,9 @@
 import OpenAI from 'openai';
 
-// Initialize the OpenAI client with API key
+// Initialize OpenAI client directly
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  dangerouslyAllowBrowser: false, // Ensure server-side only usage
 });
 
 export default openai;
@@ -23,6 +24,12 @@ export function handleOpenAIError(error: any): { message: string; status: number
     return {
       message: 'No response received from OpenAI API',
       status: 503
+    };
+  } else if (error.cause && error.cause.code === 'ERR_SSL_PACKET_LENGTH_TOO_LONG') {
+    // Handle the specific SSL error you're seeing
+    return {
+      message: 'SSL connection error when connecting to OpenAI API',
+      status: 502
     };
   } else {
     // Something happened in setting up the request

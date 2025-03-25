@@ -1,26 +1,26 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Book, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import axios from "axios";
+import { generateCourse } from "@/lib/course-api";
 
 // Import step components
-import { CourseNameStep } from "@/components/create/CourseNameStep";
-import { SubtopicStep } from "@/components/create/SubtopicStep";
-import { EducationLevelStep } from "@/components/create/EducationLevelStep";
-import { CountryStep } from "@/components/create/CountryStep";
-import { SchoolStep } from "@/components/create/SchoolStep";
-import { CurriculumStep } from "@/components/create/CurriculumStep";
-import { LearningMaterialsStep } from "@/components/create/LearningMaterialsStep";
-import { PDFUploadStep } from "@/components/create/PDFUploadStep";
-import { AnimatedProgress } from "@/components/create/AnimatedProgress";
-import { FloatingElements } from "@/components/create/FloatingElements";
+import { CourseNameStep } from "./CourseNameStep";
+import { SubtopicStep } from "./SubtopicStep";
+import { EducationLevelStep } from "./EducationLevelStep";
+import { CountryStep } from "./CountryStep";
+import { SchoolStep } from "./SchoolStep";
+import { CurriculumStep } from "./CurriculumStep";
+import { LearningMaterialsStep } from "./LearningMaterialsStep";
+import { PDFUploadStep } from "./PDFUploadStep";
+import { AnimatedProgress } from "./AnimatedProgress";
+import { FloatingElements } from "./FloatingElements";
 
 // Import types
-import { FormData } from "@/types/create";
+import { FormData, StepProps } from "@/types/create";
 
 // Constants for API endpoint and steps
 const SERVER_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -53,113 +53,61 @@ export default function CreateCoursePage() {
   const [subtopics, setSubtopics] = useState<string[]>([]);
   const [language, setLanguage] = useState("English");
   const [selectedLevel, setSelectedLevel] = useState("easy");
+  const [skipSchool, setSkipSchool] = useState(false);
 
   // Dropdown states
+  const [educationLevelDropdownOpen, setEducationLevelDropdownOpen] = useState(false);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false);
   const [curriculumDropdownOpen, setCurriculumDropdownOpen] = useState(false);
-  const [educationLevelDropdownOpen, setEducationLevelDropdownOpen] = useState(false);
   
-  // Dropdown refs
-  const countryDropdownRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
-  const schoolDropdownRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
-  const curriculumDropdownRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
-  const educationLevelDropdownRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
-  
-  // Session validation
-  useEffect(() => {
-    const isVerified = sessionStorage.getItem("isVerified");
-    if (!isVerified) {
-      router.push("/create");
-    }
-    
-    if (sessionStorage.getItem("type") !== "free") {
-      setPaidMember(true);
-    } else {
-      const validCheck = async (uid: string) => {
-        try {
-          const dataToSend = { user: uid };
-          const postURL = `${SERVER_URL}/api/valid`;
-          const res = await axios.post(postURL, dataToSend);
-          const responseData = res.data as { message: string };
-          
-          if (responseData.message !== "valid") {
-            setValid(false);
-          }
-        } catch (error) {
-          console.error("Error checking validity:", error);
-          toast({
-            title: "Error",
-            description: "Failed to verify your account status.",
-            variant: "destructive",
-          });
-        }
-      };
-      
-      const uid = sessionStorage.getItem("uid");
-      if (uid) validCheck(uid);
-    }
-  }, [router]);
+  // Dropdown refs for handling click outside
+  const educationLevelDropdownRef = useRef<HTMLDivElement>(null);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const schoolDropdownRef = useRef<HTMLDivElement>(null);
+  const curriculumDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Handle dropdown close when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
-        setCountryDropdownOpen(false);
-      }
-      if (schoolDropdownRef.current && !schoolDropdownRef.current.contains(event.target as Node)) {
-        setSchoolDropdownOpen(false);
-      }
-      if (curriculumDropdownRef.current && !curriculumDropdownRef.current.contains(event.target as Node)) {
-        setCurriculumDropdownOpen(false);
-      }
-      if (educationLevelDropdownRef.current && !educationLevelDropdownRef.current.contains(event.target as Node)) {
-        setEducationLevelDropdownOpen(false);
+  // Update form data handler
+  const updateFormData = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    
+    // Reset dependent fields when education level changes
+    if (field === "educationLevel") {
+      if (value === "skill") {
+        setFormData((prev) => ({
+          ...prev,
+          [field]: value,
+          country: "",
+          school: "",
+        }));
+        setSkipSchool(true);
+      } else {
+        setSkipSchool(false);
       }
     }
     
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Form update handlers
-  const updateFormData = (key: keyof FormData, value: any) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
-    
-    if (key === "subtopic") {
-      const splitSubtopics = value.split(",").map((st: string) => st.trim()).filter(Boolean);
-      setSubtopics(splitSubtopics);
+    // Reset school when country changes
+    if (field === "country") {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+        school: "",
+      }));
     }
   };
-
-  const updateLearningMaterials = (key: keyof FormData["learningMaterials"]) => {
-    setFormData(prev => ({
+  
+  // Update learning materials handler
+  const updateLearningMaterials = (field: keyof FormData["learningMaterials"]) => {
+    setFormData((prev) => ({
       ...prev,
       learningMaterials: {
         ...prev.learningMaterials,
-        [key]: !prev.learningMaterials[key],
+        [field]: !prev.learningMaterials[field],
       },
     }));
   };
-
-  // Navigation handlers
-  const nextStep = () => {
-    if (currentStep === 2 && formData.educationLevel === "skill") {
-      setCurrentStep(5); // Skip to curriculum step
-    } else {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
-    }
-  };
   
-  const prevStep = () => {
-    if (currentStep === 5 && formData.educationLevel === "skill") {
-      setCurrentStep(2); // Go back to education level
-    } else {
-      setCurrentStep(prev => Math.max(prev - 1, 0));
-    }
-  };
-
-  // Premium feature check
+  // Check for paid membership
   const checkPaidMembership = () => {
     if (!paidMember) {
       toast({
@@ -172,234 +120,273 @@ export default function CreateCoursePage() {
     return true;
   };
   
-  // API processing
-  const sendPrompt = async (prompt: string, mainTopic: string, selectedType: string) => {
+  // Handle next step
+  const nextStep = () => {
+    // Validate current step
+    if (currentStep === 0 && !formData.course.trim()) {
+      toast({
+        title: "Course name is required",
+        description: "Please enter a course name to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (currentStep === 1 && !formData.subtopic.trim()) {
+      toast({
+        title: "Subtopics are required",
+        description: "Please enter at least one subtopic to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (currentStep === 2 && !formData.educationLevel) {
+      toast({
+        title: "Education level is required",
+        description: "Please select your education level to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check if free user has entered too many subtopics
+    if (currentStep === 1 && !paidMember) {
+      const subtopicCount = formData.subtopic.split(",").filter(s => s.trim()).length;
+      if (subtopicCount > 5) {
+        toast({
+          title: "Too many subtopics",
+          description: "Free members are limited to 5 subtopics. Please upgrade to add more.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    // Skip school step if skill development is selected
+    if (currentStep === 3 && skipSchool) {
+      setCurrentStep(currentStep + 2);
+    } else {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+  
+  // Handle previous step
+  const prevStep = () => {
+    if (currentStep === 5 && skipSchool) {
+      setCurrentStep(currentStep - 2);
+    } else {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async () => {
+    // Final validation
+    if (!formData.course.trim() || !formData.subtopic.trim() || !formData.educationLevel) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields to generate your course.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check if free user has selected premium features
+    if (!paidMember) {
+      const subtopicCount = formData.subtopic.split(",").filter(s => s.trim()).length;
+      if (subtopicCount > 5) {
+        toast({
+          title: "Too many subtopics",
+          description: "Free members are limited to 5 subtopics. Please upgrade to add more.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (formData.learningMaterials.video) {
+        toast({
+          title: "Premium Feature",
+          description: "Video content is available for paid members only.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     setProcessing(true);
     
     try {
-      const postURL = `${SERVER_URL}/api/prompt`;
-      const res = await axios.post(postURL, { prompt });
-      const generatedText = (res.data as { generatedText: string }).generatedText;
+      // Generate course structure
+      const result = await generateCourse(
+        formData, 
+        language, 
+        selectedLevel, 
+        paidMember
+      ) as {
+        success: boolean;
+        data?: any;
+        message?: string;
+        mainTopic?: string;
+        type?: string;
+        language?: string;
+      };
       
-      const cleanedJsonString = generatedText
-        .replace(/```json/g, "")
-        .replace(/```/g, "");
+      if (result.success) {
+        // Redirect to topics page with the generated data
+        const urlData = encodeURIComponent(JSON.stringify({
+          jsonData: result.data,
+          mainTopic: result.mainTopic,
+          type: result.type,
+          language: result.language,
+          educationLevel: formData.educationLevel,
+          selectedLevel: selectedLevel
+        }));
         
-      try {
-        const parsedJson = JSON.parse(cleanedJsonString);
+        router.push(`create/topics?data=${urlData}`);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to generate course content.",
+          variant: "destructive",
+        });
         setProcessing(false);
-        
-        router.push(`/create/topics?data=${encodeURIComponent(JSON.stringify({
-          jsonData: parsedJson,
-          mainTopic: mainTopic.toLowerCase(),
-          type: formData.learningMaterials.video ? "video & text course" : "text & image course",
-          language: language,
-        }))}`);
-        
-      } catch (error) {
-        console.error("JSON parsing error:", error);
-        sendPrompt(prompt, mainTopic, selectedType); // Retry on parsing error
       }
     } catch (error) {
-      console.error("API error:", error);
-      sendPrompt(prompt, mainTopic, selectedType); // Retry on API error
-    }
-  };
-
-  // Form submission
-  const handleSubmit = () => {
-    // Validation
-    if (!formData.course.trim()) {
+      console.error("Error in course generation:", error);
       toast({
-        title: "Missing information",
-        description: "Please enter a course name.",
+        title: "Error",
+        description: "An error occurred while generating your course.",
         variant: "destructive",
       });
-      return;
+      setProcessing(false);
     }
-    
-    if (!formData.subtopic.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please enter at least one subtopic.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!valid) {
-      toast({
-        title: "Account Issue",
-        description: "There's an issue with your account. Please contact support.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Create prompt
-    const topicCount = paidMember ? "7" : "4";
-    
-    const prompt = `Generate a list of Strict ${topicCount} topics based on the ${selectedLevel} or if the user has a ${formData.school} and should strictly get the information from ${formData.school} websites and any number sub topic for each topic for main title ${formData.course.toLowerCase()}, everything in single line. Those topics should be in ${language} language,Those ${topicCount} topics should Strictly include these topics :- ${formData.subtopic.toLowerCase()}. Strictly Keep theory, youtube, image field empty. Generate in the form of JSON in this format {
-      "${formData.course.toLowerCase()}": [
-       {
-       "title": "Topic Title",
-       "subtopics": [
-        {
-        "title": "Sub Topic Title",
-        "theory": "",
-        "youtube": "",
-        "image": "",
-        "done": false
-        },
-        {
-        "title": "Sub Topic Title",
-        "theory": "",
-        "youtube": "",
-        "image": "",
-        "done": false
-        }
-       ]
-       },
-       {
-       "title": "Topic Title",
-       "subtopics": [
-        {
-        "title": "Sub Topic Title",
-        "theory": "",
-        "youtube": "",
-        "image": "",
-        "done": false
-        },
-        {
-        "title": "Sub Topic Title",
-        "theory": "",
-        "youtube": "",
-        "image": "",
-        "done": false
-        }
-       ]
-       }
-      ]
-    }`;
-    
-    const selectedType = formData.learningMaterials.video ? "Video & Text Course" : "Text & Image Course";
-    sendPrompt(prompt, formData.course, selectedType);
   };
 
-  // Submission control
-  const isLastStep = currentStep === steps.length - 1;
-  const canSubmit =
-    formData.course &&
-    formData.subtopic &&
-    formData.educationLevel &&
-    (formData.educationLevel === "skill" || formData.school) &&
-    formData.country &&
-    formData.curriculum &&
-    (formData.learningMaterials.pdf || formData.learningMaterials.video || formData.learningMaterials.text);
+  // Click outside handler for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (educationLevelDropdownRef.current && !educationLevelDropdownRef.current.contains(event.target as Node)) {
+        setEducationLevelDropdownOpen(false);
+      }
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+        setCountryDropdownOpen(false);
+      }
+      if (schoolDropdownRef.current && !schoolDropdownRef.current.contains(event.target as Node)) {
+        setSchoolDropdownOpen(false);
+      }
+      if (curriculumDropdownRef.current && !curriculumDropdownRef.current.contains(event.target as Node)) {
+        setCurriculumDropdownOpen(false);
+      }
+    };
 
-  // Common props for step components
-  const commonStepProps = {
-    formData,
-    updateFormData,
-    updateLearningMaterials,
-    paidMember,
-    checkPaidMembership,
-    nextStep
-  };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
-  // Dropdown props
-  const dropdownProps = {
-    countryDropdownOpen,
-    setCountryDropdownOpen,
-    schoolDropdownOpen, 
-    setSchoolDropdownOpen,
-    curriculumDropdownOpen,
-    setCurriculumDropdownOpen,
-    educationLevelDropdownOpen,
-    setEducationLevelDropdownOpen,
-    countryDropdownRef,
-    schoolDropdownRef,
-    curriculumDropdownRef,
-    educationLevelDropdownRef
-  };
-
-  // Render current step component
+  // Render current step
   const renderStep = () => {
+    const commonProps: StepProps = {
+      formData,
+      updateFormData,
+      paidMember,
+      checkPaidMembership,
+      updateLearningMaterials,
+      language,
+      setLanguage,
+      setSelectedLevel,
+      educationLevelDropdownOpen,
+      setEducationLevelDropdownOpen,
+      educationLevelDropdownRef: educationLevelDropdownRef as React.RefObject<HTMLDivElement>,
+      countryDropdownOpen,
+      setCountryDropdownOpen,
+      countryDropdownRef: countryDropdownRef as React.RefObject<HTMLDivElement>,
+      schoolDropdownOpen,
+      setSchoolDropdownOpen,
+      schoolDropdownRef: schoolDropdownRef as React.RefObject<HTMLDivElement>,
+      curriculumDropdownOpen,
+      setCurriculumDropdownOpen,
+      curriculumDropdownRef: curriculumDropdownRef as React.RefObject<HTMLDivElement>
+    };
+
     switch (currentStep) {
       case 0:
-        return <CourseNameStep {...commonStepProps} />;
+        return <CourseNameStep {...commonProps} />;
       case 1:
-        return <SubtopicStep {...commonStepProps} />;
+        return <SubtopicStep {...commonProps} />;
       case 2:
-        return <EducationLevelStep 
-          {...commonStepProps}
-          {...dropdownProps} 
-          language={language}
-          setLanguage={setLanguage}
-          selectedLevel={selectedLevel}
-          setSelectedLevel={setSelectedLevel}
-        />;
+        return <EducationLevelStep {...commonProps} />;
       case 3:
-        return <CountryStep 
-          {...commonStepProps}
-          {...dropdownProps} 
-        />;
+        return <CountryStep {...commonProps} />;
       case 4:
-        return <SchoolStep 
-          {...commonStepProps}
-          {...dropdownProps} 
-        />;
+        return <SchoolStep {...commonProps} />;
       case 5:
-        return <CurriculumStep 
-          {...commonStepProps}
-          {...dropdownProps} 
-        />;
+        return <CurriculumStep {...commonProps} />;
       case 6:
-        return <LearningMaterialsStep {...commonStepProps} />;
+        return <LearningMaterialsStep {...commonProps} />;
       case 7:
-        return <PDFUploadStep {...commonStepProps} />;
+        return <PDFUploadStep {...commonProps} />;
       default:
-        return null;
+        return <CourseNameStep {...commonProps} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-      <div className="w-full max-w-md p-8 space-y-8">
-        <AnimatedProgress 
-          currentStep={currentStep} 
-          totalSteps={formData.educationLevel === "skill" ? steps.length - 1 : steps.length}
-          skipSchool={formData.educationLevel === "skill"} 
-        />
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.3 }}
-          >
-            {renderStep()}
-          </motion.div>
-        </AnimatePresence>
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 container max-w-3xl mx-auto px-4 py-8">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold mb-2">Create Your Learning Journey</h1>
+          <p className="text-muted-foreground">
+            Step {currentStep + 1} of {skipSchool ? steps.length - 1 : steps.length}
+          </p>
+          <div className="mt-4">
+            <AnimatedProgress 
+              currentStep={currentStep} 
+              totalSteps={steps.length}
+              skipSchool={skipSchool}
+            />
+          </div>
+        </div>
+        
+        <div className="bg-card border rounded-xl shadow-sm p-6 mb-8">
+          {renderStep()}
+        </div>
+        
         <div className="flex justify-between">
           <Button
-            onClick={prevStep}
-            disabled={currentStep === 0}
             variant="outline"
-            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+            onClick={prevStep}
+            disabled={currentStep === 0 || processing}
           >
             Back
           </Button>
-          {isLastStep ? (
-            <Button onClick={handleSubmit} disabled={!canSubmit || processing}>
-              {processing ? "Creating..." : "Submit"}
+          
+          {currentStep === (skipSchool ? steps.length - 2 : steps.length - 1) ? (
+            <Button 
+              onClick={handleSubmit}
+              disabled={processing}
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating Course...
+                </>
+              ) : (
+                "Generate Course"
+              )}
             </Button>
           ) : (
-            <Button onClick={nextStep}>Next</Button>
+            <Button
+              onClick={nextStep}
+            >
+              Next
+            </Button>
           )}
         </div>
       </div>
+      
       <FloatingElements />
     </div>
   );

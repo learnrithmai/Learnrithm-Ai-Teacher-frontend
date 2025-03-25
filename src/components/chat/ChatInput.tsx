@@ -1,10 +1,9 @@
-"use client";
-
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, X, Send } from "lucide-react";
+import { Upload, X, Send, Loader } from "lucide-react";
 import { FilePreview, Mode } from "@/types/chat";
+import { AnalysisResult } from "@/types/files";
 
 interface ChatInputProps {
   input: string;
@@ -16,6 +15,7 @@ interface ChatInputProps {
   onRemoveFile: (fileId: string) => void;
   onSend: () => void;
   onModeSelect: (mode: string) => void;
+  onFileAnalysisComplete?: (fileId: string, analysis: AnalysisResult) => void;
 }
 
 export function ChatInput({ 
@@ -27,15 +27,31 @@ export function ChatInput({
   onFileChange, 
   onRemoveFile, 
   onSend, 
-  onModeSelect 
+  onModeSelect,
+  onFileAnalysisComplete
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [processingFiles, setProcessingFiles] = useState<string[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const handleFileUpload = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
+
+  // Enhanced file upload handler without immediate processing
+  // We'll process the files with the user prompt when they hit send
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
+    
+    // Standard file handling that adds files to preview
+    onFileChange(e);
+  };
+
+  const inputPlaceholder = filePreview.length > 0 
+    ? "Add instructions for analyzing the document..." 
+    : "Ask anything";
 
   return (
     <div className="border-t border-gray-200 p-4">
@@ -44,9 +60,12 @@ export function ChatInput({
           type="file" 
           ref={fileInputRef} 
           className="hidden" 
-          onChange={onFileChange}
+          onChange={handleFileChange}
+          accept=".pdf,.txt,.docx,image/*"
           multiple
         />
+        
+        {/* File preview section with processing indicators */}
         {filePreview.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">
             {filePreview.map(file => (
@@ -55,16 +74,27 @@ export function ChatInput({
                 className="flex items-center bg-gray-100 rounded-lg px-3 py-1 text-sm"
               >
                 <span className="truncate max-w-xs">{file.name}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 ml-1 text-gray-500 hover:text-gray-700"
-                  onClick={() => onRemoveFile(file.id)}
-                >
-                  <X size={14} />
-                </Button>
+                {processingFiles.includes(file.name) ? (
+                  <Loader size={14} className="ml-1 animate-spin" />
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 ml-1 text-gray-500 hover:text-gray-700"
+                    onClick={() => onRemoveFile(file.id)}
+                  >
+                    <X size={14} />
+                  </Button>
+                )}
               </div>
             ))}
+          </div>
+        )}
+        
+        {/* Error message display */}
+        {fileError && (
+          <div className="text-red-500 text-xs mb-2">
+            {fileError}
           </div>
         )}
         
@@ -75,11 +105,16 @@ export function ChatInput({
             className="h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 ml-1"
             onClick={handleFileUpload}
             title="Upload files or images"
+            disabled={processingFiles.length > 0}
           >
-            <Upload size={16} />
+            {processingFiles.length > 0 ? (
+              <Loader size={16} className="animate-spin" />
+            ) : (
+              <Upload size={16} />
+            )}
           </Button>
           <Input
-            placeholder="Ask anything"
+            placeholder={inputPlaceholder}
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSend()}
@@ -104,11 +139,11 @@ export function ChatInput({
                 variant="outline"
                 size="sm"
                 className={`rounded-full flex items-center gap-1 text-xs border transition-colors ${
-                  activeMode === mode.name 
+                  activeMode === mode.id
                     ? "bg-black text-white border-black" 
                     : "bg-transparent text-gray-700 border-gray-300"
                 }`}
-                onClick={() => onModeSelect(mode.name)}
+                onClick={() => onModeSelect(mode.id)}
               >
                 <Icon size={14} />
                 <span>{mode.name}</span>
