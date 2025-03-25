@@ -19,7 +19,7 @@ export interface FilePreview {
   name: string;
   size: number;
   type: string;
-  analysis?: AnalysisResult; 
+  analysis?: AnalysisResult; // Optional analysis results added from the main branch
 }
 
 export interface AnalysisResult {

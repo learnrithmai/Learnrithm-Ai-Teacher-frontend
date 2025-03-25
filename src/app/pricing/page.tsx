@@ -1,16 +1,6 @@
-'use client';
+"use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import styles from "./pricing.module.css";
-import { Home, Layout, Compass, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { 
-  Sheet, 
-  SheetTrigger, 
-  SheetContent, 
-  SheetHeader 
-} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import SideBar from "@/components/side-bar";
 
 // Local interfaces
 interface PricingTierFrequency {
@@ -80,7 +71,8 @@ const tiers: PricingTier[] = [
 ];
 
 // Utility function for joining class names.
-const cn = (...args: Array<string | boolean | undefined | null>) => args.filter(Boolean).join(" ");
+const cn = (...args: Array<string | boolean | undefined | null>) =>
+  args.filter(Boolean).join(" ");
 
 // CheckIcon component for list items.
 const CheckIcon = ({ className }: { className?: string }) => {
@@ -104,7 +96,8 @@ export default function PricingPage() {
   const [frequency, setFrequency] = useState(frequencies[0]);
   const [showExitIntent, setShowExitIntent] = useState(false);
   const tier = tiers[0];
-  const bannerText = 'Save 25% when you use coupon code "LEARNSMART" at checkout';
+  const bannerText =
+    'Save 25% when you use coupon code "LEARNSMART" at checkout';
 
   useEffect(() => {
     const handleMouseOut = (event: MouseEvent) => {
@@ -118,76 +111,18 @@ export default function PricingPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50/50">
-        {/* Mobile Navigation */}
-        <div className="md:hidden fixed top-0 left-0 right-0 p-4 bg-gray-50 border-b z-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Image src="/images/Logomark.png" alt="Learnrithm AI Logo" width={32} height={32} />
-              <span className="font-semibold text-xl">Learnrithm AI</span>
-            </div>
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64 p-0">
-                <>
-                  <SheetHeader className="p-4 border-b">
-                    <div className="flex items-center gap-2">
-                      <Image src="/images/Logomark.png" alt="Learnrithm AI Logo" width={32} height={32} />
-                      <span className="font-semibold text-xl">Learnrithm AI</span>
-                    </div>
-                  </SheetHeader>
-                  <nav className="flex-1 p-4 space-y-2">
-                    <Button variant="ghost" className="w-full justify-start gap-2 bg-blue-50 text-blue-600">
-                      <Home className="h-5 w-5" /> Pricing
-                    </Button>
-                    <Link href="/dashboard">
-                      <Button variant="ghost" className="w-full justify-start gap-2">
-                        <Layout className="h-5 w-5" /> Dashboard
-                      </Button>
-                    </Link>
-                    <Link href="/profile">
-                      <Button variant="ghost" className="w-full justify-start gap-2">
-                        <Compass className="h-5 w-5" /> Profile
-                      </Button>
-                    </Link>
-                  </nav>
-                </>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-
-        {/* Desktop Sidebar */}
-        <aside className="fixed left-0 top-0 h-full w-64 bg-card p-4 border-r hidden md:block">
-          <div className="flex items-center gap-2 mb-8">
-            <Image src="/images/Logomark.png" alt="Learnrithm AI Logo" width={32} height={32} />
-            <span className="font-semibold text-xl">Learnrithm AI</span>
-          </div>
-          <nav className="space-y-2">
-            <Button variant="ghost" className="w-full justify-start gap-2 bg-blue-50 text-blue-600">
-              <Home className="h-5 w-5" /> Pricing
-            </Button>
-            <Link href="/dashboard">
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Layout className="h-5 w-5" /> Dashboard
-              </Button>
-            </Link>
-            <Link href="/profile">
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Compass className="h-5 w-5" /> Profile
-              </Button>
-            </Link>
-          </nav>
-        </aside>
-
+      <div className="min-h-screen bg-gray-50/50 pt-[5rem]">
+        {/* Side Bar */}
+        <SideBar />
         {/* Main Content */}
         <div className="md:ml-64">
           <div className="mt-20 md:mt-0">
-            <div className={cn("flex flex-col w-full items-center", styles.fancyOverlay)}>
+            <div
+              className={cn(
+                "flex flex-col w-full items-center",
+                styles.fancyOverlay
+              )}
+            >
               <div className="w-full flex flex-col items-center mb-24">
                 <div className="mx-auto max-w-7xl px-6 xl:px-8">
                   <div className="mx-auto max-w-2xl sm:text-center">
@@ -234,7 +169,9 @@ export default function PricingPage() {
                               aria-checked={frequency.value === option.value}
                               onClick={() => {
                                 setFrequency(
-                                  frequencies.find((f) => f.value === option.value) as PricingTierFrequency
+                                  frequencies.find(
+                                    (f) => f.value === option.value
+                                  ) as PricingTierFrequency
                                 );
                               }}
                             >
@@ -250,8 +187,12 @@ export default function PricingPage() {
 
                   <div className="flex flex-wrap xl:flex-nowrap items-center bg-white dark:bg-gray-900/80 backdrop-blur-md mx-auto mt-4 max-w-2xl rounded-3xl ring-1 ring-gray-300/70 dark:ring-gray-700 xl:mx-0 xl:flex xl:max-w-none">
                     <div className="p-8 sm:p-10 xl:flex-auto">
-                      <h3 className="text-black dark:text-white text-2xl font-bold tracking-tight">{tier.name}</h3>
-                      <p className="mt-6 text-base leading-7 text-gray-700 dark:text-gray-400">{tier.description}</p>
+                      <h3 className="text-black dark:text-white text-2xl font-bold tracking-tight">
+                        {tier.name}
+                      </h3>
+                      <p className="mt-6 text-base leading-7 text-gray-700 dark:text-gray-400">
+                        {tier.description}
+                      </p>
                       <div className="mt-12 flex items-center gap-x-4">
                         <h4 className="flex-none text-sm font-semibold leading-6 text-black dark:text-white">
                           Included features
@@ -260,8 +201,14 @@ export default function PricingPage() {
                       </div>
                       <ul className="mt-10 grid grid-cols-1 gap-4 text-sm leading-6 text-gray-700 dark:text-gray-400">
                         {tier.features.map((feature) => (
-                          <li key={feature} className="flex items-center gap-x-2 text-sm">
-                            <CheckIcon className="h-6 w-6 flex-none text-sky-500" aria-hidden="true" />
+                          <li
+                            key={feature}
+                            className="flex items-center gap-x-2 text-sm"
+                          >
+                            <CheckIcon
+                              className="h-6 w-6 flex-none text-sky-500"
+                              aria-hidden="true"
+                            />
                             {feature}
                           </li>
                         ))}
@@ -279,15 +226,22 @@ export default function PricingPage() {
                             <span
                               className={cn(
                                 "text-black dark:text-white text-5xl font-bold tracking-tight",
-                                tier.discountPrice && tier.discountPrice[frequency.value as keyof typeof tier.discountPrice]
+                                tier.discountPrice &&
+                                  tier.discountPrice[
+                                    frequency.value as keyof typeof tier.discountPrice
+                                  ]
                                   ? "line-through"
                                   : ""
                               )}
                             >
-                              {typeof tier.price === "string" ? tier.price : tier.price[frequency.value]}
+                              {typeof tier.price === "string"
+                                ? tier.price
+                                : tier.price[frequency.value]}
                             </span>
                             <span className="text-black dark:text-white">
-                              {typeof tier.discountPrice === "string" ? tier.discountPrice : tier.discountPrice[frequency.value]}
+                              {typeof tier.discountPrice === "string"
+                                ? tier.discountPrice
+                                : tier.discountPrice[frequency.value]}
                             </span>
                             <span className="text-sm font-semibold leading-6 tracking-wide text-gray-700 dark:text-gray-400">
                               {frequency.priceSuffix}
@@ -321,12 +275,14 @@ export default function PricingPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Special Offer!</AlertDialogTitle>
             <AlertDialogDescription>
-              Don't miss out on this exclusive discount!
+              Don&apos;t miss out on this exclusive discount!
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <p className="text-center text-lg font-semibold">
-              Use promo code <span className="text-sky-500">learnrithmaiXXX</span> to get 40% off the price!
+              Use promo code{" "}
+              <span className="text-sky-500">learnrithmaiXXX</span> to get 40%
+              off the price!
             </p>
           </div>
           <AlertDialogFooter>
