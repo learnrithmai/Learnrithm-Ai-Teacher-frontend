@@ -115,19 +115,19 @@ export default function Signin() {
     }
 
     try {
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
+      const response : { status: number, data: { message?: string, error?: string }} = await axios.post("/api/auth/forgot-password", {
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
+        data:{
+          dataToSend
+        },
       });
-      const result = await response.json();
 
-      if (response.ok) {
-        toast({ title: result.message });
+      if (response.status = 200) {
+        toast({ title: response.data.message });
         localStorage.setItem("lastResetTimestamp", now.toString());
         resetForgotForm();
       } else {
-        toast({ title: result.error || "Error sending reset link" });
+        toast({ title: response.data.error || "Error sending reset link" });
       }
     } catch (error) {
       logger.error("Forgot password error", error as string);

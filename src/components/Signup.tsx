@@ -22,7 +22,7 @@ import { useRouter } from "next/navigation";
 import GoogleButton from "./google-button";
 import { RegisterUserSchema } from "@/types/authSchema";
 import logger from "@/utils/chalkLogger";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 
 // Extend the RegisterUserSchema with a confirmPassword field for form validation.
 type FormValues = RegisterUserSchema & {
@@ -84,31 +84,36 @@ export default function Signup() {
     }
 
     // Prepare data to be passed to the credentials provider.
-    const credentials = {
+    const credentials: RegisterUserSchema = {
       Name: data.Name,
       email: data.email,
       password: data.password,
       country: data.country,
       referralCode: data.referralCode,
       method: "normal",
-      image: data.image,
-      isSignup: "true",
     };
 
     // Use NextAuth signIn with the "credentials" provider.
     const result = await signIn("credentials", {
       redirect: false,
       ...credentials,
+      isSignup: "true"
     });
 
     if (result?.ok) {
       toast({ title: "User registered successfully" });
       setTimeout(() => router.push("/"), 2000);
     } else {
-      logger.error("An error occurred during registration", result?.error || "");
+      logger.error(
+        "An error occurred during registration",
+        result?.error || ""
+      );
       toast({ title: "An error occurred during registration" });
     }
   };
+
+  const session = useSession();
+  console.log(session);
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">

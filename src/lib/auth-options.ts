@@ -74,7 +74,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   }
   try {
     const response = await axios.post<RefreshApiResponse>(
-      `${SERVER_API_URL}/refresh-tokens`,
+      `${SERVER_API_URL}/auth/refresh-tokens`,
       null,
       {
         headers: { Cookie: `jwt=${token.refreshToken}` },
@@ -147,14 +147,14 @@ export const authOptions: NextAuthOptions = {
             const dataToSend: RegisterUserSchema = {
               email: credentials.email,
               password: credentials.password,
-              Name: credentials.Name || "",
+              Name: credentials.Name,
               method: "normal",
-              country: credentials.country || "",
-              referralCode: credentials.referralCode || "",
+              country: credentials.country,
+              referralCode: credentials.referralCode,
             };
             // SIGNUP: Call the backend /register endpoint.
             response = await axios.post<AuthApiResponse>(
-              `${SERVER_API_URL}/register`,
+              `${SERVER_API_URL}/auth/register`,
               dataToSend
             );
             if (response.status !== 201) {
@@ -162,7 +162,7 @@ export const authOptions: NextAuthOptions = {
             }
           } else {
             // LOGIN: Call the backend /login endpoint.
-            response = await axios.post<AuthApiResponse>(`${SERVER_API_URL}/login`, {
+            response = await axios.post<AuthApiResponse>(`${SERVER_API_URL}/auth/login`, {
               email: credentials.email,
               password: credentials.password,
             });
