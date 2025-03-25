@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Book, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,58 +30,159 @@ interface GeneratedContent {
   content: TopicContent;
 }
 
+interface CourseInfo {
+  subject: string;
+  difficulty: string;
+  educationLevel: string;
+  createdAt: string;
+}
+
 export default function SubjectsTopicsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get parameters from URL or use defaults
+  const subject = searchParams?.get('subject') || "Mathematics";
+  const difficulty = searchParams?.get('difficulty') || "medium";
+  const educationLevel = searchParams?.get('educationLevel') || "university";
+  const subtopics = searchParams?.get('subtopics') || "";
+  
+  // Use refs for values that shouldn't cause rerenders
+  const subtopicsListRef = useRef<string[]>([]);
+  // Initialize on mount but don't update it on rerenders
+  useEffect(() => {
+    subtopicsListRef.current = subtopics.split(',').map(s => s.trim()).filter(Boolean);
+  }, []); // Empty dependency - run once on mount
+  
   const [expandedTopics, setExpandedTopics] = useState<string[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [topics, setTopics] = useState<Topic[]>([]);
-
+  
+  // Use refs instead of state for values that should persist but not cause rerenders
+  const retryCountRef = useRef(0);
+  const fetchRequestSentRef = useRef(false);
+  const isMountedRef = useRef(true);
+  
+  // Fetch topics only once on initial mount
   useEffect(() => {
+    // Set isMounted flag for cleanup
+    isMountedRef.current = true;
+    
+    // Only fetch if we haven't already
+    if (fetchRequestSentRef.current) return;
+    
+    // Mark that we've sent a fetch request
+    fetchRequestSentRef.current = true;
+    
     const fetchTopics = async () => {
+      // Check if component is still mounted
+      if (!isMountedRef.current) return;
+      
       try {
+        // Validate subject
+        if (!subject) {
+          if (isMountedRef.current) {
+            toast({
+              title: "Missing Subject",
+              description: "Please select a subject on the previous page.",
+              variant: "destructive",
+            });
+            router.push("/create");
+          }
+          return;
+        }
+        
+        console.log(`Fetching topics for ${subject} with subtopics: ${subtopicsListRef.current.join(', ')}`);
+        
         const response = await fetch('/api/generate-topics', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            subject: "Mathematics",
-            difficulty: "medium",
+            subject,
+            difficulty,
+            educationLevel,
+            subtopics: subtopicsListRef.current,
             count: 5
           }),
         });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
+        
+        // Check if component is still mounted after fetch completes
+        if (!isMountedRef.current) return;
+        
         const data = await response.json();
         
+        if (!response.ok) {
+          throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        }
+        
         if (data.success) {
-          setTopics(data.data.topics);
-          if (data.data.topics.length > 0) {
-            setExpandedTopics([data.data.topics[0].name]);
+          if (data.data && Array.isArray(data.data.topics) && data.data.topics.length > 0) {
+            // Only update state if component is mounted
+            if (isMountedRef.current) {
+              setTopics(data.data.topics);
+              setExpandedTopics([data.data.topics[0].name]);
+              setError(null);
+              console.log(`Successfully loaded ${data.data.topics.length} topics`);
+              setLoading(false); // Set loading to false on success
+            }
+          } else {
+            throw new Error("Invalid data structure returned from API");
           }
         } else {
           throw new Error(data.message || "Failed to generate topics");
         }
       } catch (error) {
         console.error("Error fetching topics:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load topics. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+        
+        // Only update state if component is mounted
+        if (isMountedRef.current) {
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          
+          // Handle retry logic with ref counter
+          if (retryCountRef.current < 2) {
+            retryCountRef.current += 1;
+            
+            toast({
+              title: "Retrying...",
+              description: `Attempt ${retryCountRef.current}/3 to load topics`,
+            });
+            
+            // Set a timeout for retry
+            setTimeout(() => {
+              // Check again if component is mounted before retrying
+              if (isMountedRef.current) {
+                fetchTopics(); // Retry the fetch
+              }
+            }, 2000);
+          } else {
+            // Set final error state after all retries fail
+            setError(errorMessage);
+            setLoading(false);
+            
+            toast({
+              title: "Error",
+              description: "Failed to load topics after multiple attempts. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }
       }
     };
-
+    
+    // Execute the fetch
     fetchTopics();
-  }, []);
+    
+    // Cleanup function to prevent state updates on unmount
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []); // Empty dependency array - run once on mount
 
   const toggleTopic = (topicName: string) => {
     setExpandedTopics(prev =>
@@ -130,9 +231,11 @@ export default function SubjectsTopicsPage() {
               mainTopic: topic.name,
               subtopicTitle: subtopic,
               contentType: "Text & Image Course",
-              educationLevel: "university",
-              language: "English",
-              selectedLevel: "medium"
+              educationLevel: educationLevel,
+              subject: subject,
+              relatedSubtopics: subtopicsListRef.current,
+              difficulty: difficulty,
+              language: "English"
             }),
           });
 
@@ -168,10 +271,21 @@ export default function SubjectsTopicsPage() {
       }
 
       if (generatedContent.length > 0) {
+        // Store generated content and course info
         localStorage.setItem('generatedTopics', JSON.stringify(generatedContent));
+        
+        // Store course metadata
+        const courseInfo: CourseInfo = {
+          subject,
+          difficulty,
+          educationLevel,
+          createdAt: new Date().toISOString()
+        };
+        localStorage.setItem('courseInfo', JSON.stringify(courseInfo));
+        
         toast({
           title: "Success",
-          description: `Successfully generated ${generatedContent.length} topics`,
+          description: `Successfully generated ${generatedContent.length} topics for ${subject}`,
         });
         router.push('/create/topics/courses');
       } else {
@@ -190,23 +304,89 @@ export default function SubjectsTopicsPage() {
     }
   };
 
-  if (loading) {
+  // Show error state
+  if (error && !loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
-          <h2 className="text-2xl font-bold">Generating Topics...</h2>
+        <div className="text-center max-w-md p-8 bg-card rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold text-destructive mb-4">Error Loading Topics</h2>
+          <p className="text-muted-foreground mb-6">{error}</p>
+          <Button onClick={() => router.push("/create")}>
+            Go Back
+          </Button>
         </div>
       </div>
     );
   }
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+          <h2 className="text-2xl font-bold">Generating Topics for {subject}</h2>
+          <p className="text-muted-foreground mt-2">Difficulty: {difficulty} • Level: {educationLevel}</p>
+          {subtopicsListRef.current.length > 0 && (
+            <div className="mt-4 max-w-md mx-auto">
+              <p className="text-sm font-medium">Focusing on:</p>
+              <div className="flex flex-wrap justify-center gap-2 mt-2">
+                {subtopicsListRef.current.map((item, index) => (
+                  <span key={index} className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground mt-4">
+            {retryCountRef.current > 0 ? `Retry attempt ${retryCountRef.current}/3...` : ""}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if topics actually loaded
+  if (!topics || topics.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md p-8 bg-card rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold mb-4">No Topics Generated</h2>
+          <p className="text-muted-foreground mb-6">
+            We couldn't generate any topics for "{subject}". Please try again with different parameters.
+          </p>
+          <Button onClick={() => router.push("/create")}>
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Content loaded state
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
       <div className="w-full max-w-3xl p-8 space-y-8">
-        <h1 className="text-4xl font-bold text-center mb-8">
-          Select Topics to Learn
+        <h1 className="text-4xl font-bold text-center mb-2">
+          {subject} Topics
         </h1>
+        <p className="text-center text-muted-foreground mb-8">
+          Select topics you want to learn at {difficulty} difficulty level
+        </p>
+        
+        {subtopicsListRef.current.length > 0 && (
+          <div className="p-4 bg-muted rounded-lg mb-6">
+            <p className="text-sm font-medium mb-2">Topics are based on your selected areas:</p>
+            <div className="flex flex-wrap gap-2">
+              {subtopicsListRef.current.map((item, index) => (
+                <span key={index} className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         
         <div className="grid gap-6">
           <AnimatePresence>

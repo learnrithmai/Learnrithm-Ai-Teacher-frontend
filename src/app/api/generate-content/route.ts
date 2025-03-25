@@ -74,7 +74,9 @@ async function generateVideoTextContent(
       messages: [
         {
           role: "system",
-          content: "You are an expert educator specializing in creating engaging, accurate educational content. Format your response using markdown for clarity."
+          content: `You are an expert educational content creator specializing in ${mainTopic}, particularly on topics related to ${subtopicTitle}. 
+          Create accurate, comprehensive, and pedagogically sound content that is directly relevant to the requested topic.
+          Ensure your content is factually correct and appropriate for ${educationLevel} education at ${selectedLevel} difficulty level.`
         },
         {
           role: "user",
