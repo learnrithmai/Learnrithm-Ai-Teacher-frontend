@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import ReactMarkdown from 'react-markdown'
 import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 
 interface MainContentProps {
@@ -19,23 +18,72 @@ interface TopicContent {
   type: string;
 }
 
+const CustomVideoPlayer = ({ videoId, title }: { videoId: string; title: string }) => {
+  return (
+    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black/5 dark:bg-white/5">
+      <iframe
+        className="absolute top-0 left-0 w-full h-full"
+        src={`https://www.youtube.com/embed/${videoId}?controls=1&modestbranding=1&rel=0&color=white&showinfo=0&iv_load_policy=3`}
+        title={title}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        style={{
+          border: 'none',
+          borderRadius: '8px',
+        }}
+      />
+    </div>
+  );
+};
+
 export default function MainContent({ selectedSubject, selectedTopic }: MainContentProps) {
   const [content, setContent] = useState<TopicContent | null>(null)
+  const [videoId, setVideoId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (selectedSubject && selectedTopic) {
-      // Load content from localStorage
-      const savedTopics = localStorage.getItem('generatedTopics')
-      if (savedTopics) {
-        const topics = JSON.parse(savedTopics)
-        const topicContent = topics.find(
-          (t: any) => t.mainTopic === selectedSubject && t.name === selectedTopic
-        )
-        if (topicContent) {
-          setContent(topicContent.content)
+    const fetchContent = async () => {
+      if (selectedSubject && selectedTopic) {
+        setLoading(true)
+        setVideoId(null) // Reset video when changing topics
+        
+        try {
+          // Load content from localStorage
+          const savedTopics = localStorage.getItem('generatedTopics')
+          if (savedTopics) {
+            const topics = JSON.parse(savedTopics)
+            const topicContent = topics.find(
+              (t: any) => t.mainTopic === selectedSubject && t.name === selectedTopic
+            )
+            
+            if (topicContent) {
+              setContent(topicContent.content)
+              
+              // Search for a relevant YouTube video with more specific query
+              const searchQuery = `${selectedSubject} ${selectedTopic} educational lecture explanation`
+              const response = await fetch(
+                `/api/youtube?q=${encodeURIComponent(searchQuery)}`
+              )
+              
+              if (!response.ok) {
+                throw new Error('Failed to fetch video')
+              }
+
+              const data = await response.json()
+              if (data.videoId) {
+                setVideoId(data.videoId)
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching content:', error)
+        } finally {
+          setLoading(false)
         }
       }
     }
+
+    fetchContent()
   }, [selectedSubject, selectedTopic])
 
   if (!selectedSubject || !selectedTopic) {
@@ -48,10 +96,13 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
     )
   }
 
-  if (!content) {
+  if (!content || loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin" />
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading content...</p>
+        </div>
       </div>
     )
   }
@@ -61,34 +112,37 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-6"
+      className="space-y-6 p-6 max-w-4xl mx-auto"
     >
-      <h1 className="text-3xl font-bold">{selectedTopic}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">{selectedTopic}</h1>
+        <span className="text-sm text-muted-foreground">{selectedSubject}</span>
+      </div>
       
-      <Card className="p-6">
+      {videoId && (
+        <Card className="border-0 shadow-lg overflow-hidden">
+          <CustomVideoPlayer 
+            videoId={videoId} 
+            title={`${selectedTopic} - Educational Content`}
+          />
+        </Card>
+      )}
+      
+      <Card className="p-6 shadow-lg">
         <div className="prose dark:prose-invert max-w-none">
           <ReactMarkdown>{content.theory}</ReactMarkdown>
         </div>
         
-        {content.videoQuery && (
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Related Video Content</h3>
-            <Button
-              onClick={() => window.open(
-                `https://www.youtube.com/results?search_query=${encodeURIComponent(content.videoQuery ?? '')}`,
-                '_blank'
-              )}
-            >
-              Watch on YouTube
-            </Button>
-          </div>
-        )}
-
         {content.imagePrompt && (
-          <div className="mt-6">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-6 p-4 bg-muted/50 rounded-lg"
+          >
             <h3 className="text-lg font-semibold mb-2">Visual Representation</h3>
             <p className="text-muted-foreground">{content.imagePrompt}</p>
-          </div>
+          </motion.div>
         )}
       </Card>
     </motion.div>
