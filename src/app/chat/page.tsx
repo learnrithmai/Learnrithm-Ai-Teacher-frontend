@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BookOpen, Brain, FileQuestion, HelpCircle } from "lucide-react";
 import { Chat, Message, FilePreview, Mode } from "@/types/chat";
 import { AnalysisResult } from "@/types/files";
@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/chat/Sidebar";
 import { MobileSidebar } from "@/components/chat/MobileSidebar";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { v4 as uuidv4 } from "uuid"; // You'll need to install this: npm install uuid
 
 export default function Home() {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -22,6 +23,20 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filePreview, setFilePreview] = useState<FilePreview[]>([]);
   const [currentFiles, setCurrentFiles] = useState<File[]>([]);
+  const [userId, setUserId] = useState<string>(""); // Add userId state
+
+  // Initialize or get userId on component mount
+  useEffect(() => {
+    // Get existing or generate new anonymous user ID
+    const storedUserId = localStorage.getItem('anonymousUserId');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    } else {
+      const newUserId = uuidv4(); // Generate UUID
+      localStorage.setItem('anonymousUserId', newUserId);
+      setUserId(newUserId);
+    }
+  }, []);
 
   const modes: Mode[] = [
     { id: "study", name: "Study", icon: BookOpen },
@@ -57,7 +72,7 @@ export default function Home() {
     return newChatId;
   };
 
-  // Process files with user prompt
+  // Process files with user prompt - updated to include userId tracking
   const processFilesWithPrompt = async (files: FilePreview[], prompt: string, mode: string) => {
     setIsLoading(true);
     
@@ -84,8 +99,14 @@ export default function Home() {
           formData.append('prompt', prompt);
         }
         
+        // Add user ID for tracking
+        formData.append('userId', userId);
+        
         const response = await fetch('/api/analyze', {
           method: 'POST',
+          headers: {
+            'x-user-id': userId // Add user ID header
+          },
           body: formData,
         });
         
@@ -186,16 +207,18 @@ export default function Home() {
           content: msg.content
         }));
 
-        // Call the API with the selected mode
+        // Call the API with the selected mode and user ID for tracking
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-user-id': userId // Add user ID to headers for tracking
           },
           body: JSON.stringify({
             messages: apiMessages,
             mode: activeMode,
-            max_tokens: 1500
+            max_tokens: 1500,
+            userId: userId // Also include in body as fallback
           })
         });
 

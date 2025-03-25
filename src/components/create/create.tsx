@@ -232,19 +232,32 @@ export default function CreateCoursePage() {
         language?: string;
       };
       
+      // Check if successful (fixed the typo from 'sesuccess' to 'result.success')
       if (result.success) {
-        // Redirect to topics page with the generated data
-        const urlData = encodeURIComponent(JSON.stringify({
+        // Store metadata for use in the topics page
+        const urlData = {
           jsonData: result.data,
           mainTopic: result.mainTopic,
           type: result.type,
           language: result.language,
           educationLevel: formData.educationLevel,
           selectedLevel: selectedLevel
-        }));
+        };
         
-        router.push(`create/topics?data=${urlData}`);
+        // Save to localStorage for backup/state persistence
+        try {
+          localStorage.setItem('courseGenerationData', JSON.stringify(urlData));
+        } catch (e) {
+          console.log('Could not save to localStorage');
+        }
+        
+        // Redirect to topics page with query parameters
+        router.push(`/create/topics?subject=${encodeURIComponent(formData.course)}&difficulty=${selectedLevel}&educationLevel=${formData.educationLevel}&subtopics=${encodeURIComponent(formData.subtopic)}`);
+        
+        // Don't show error toast on success or set processing to false
+        // The component will unmount due to navigation
       } else {
+        // Only show error toast and reset processing state if there was an error
         toast({
           title: "Error",
           description: result.message || "Failed to generate course content.",
@@ -371,10 +384,10 @@ export default function CreateCoursePage() {
               {processing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Course...
+                  Creating Topics...
                 </>
               ) : (
-                "Generate Course"
+                "Create Topics"
               )}
             </Button>
           ) : (
