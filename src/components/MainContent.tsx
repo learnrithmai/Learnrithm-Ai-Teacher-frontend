@@ -11,6 +11,13 @@ interface MainContentProps {
   selectedTopic: string | null
 }
 
+interface CourseInfo {
+  subject: string;
+  difficulty: string;
+  educationLevel: string;
+  createdAt: string;
+}
+
 interface TopicContent {
   theory: string;
   videoQuery?: string;
@@ -40,6 +47,20 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
   const [content, setContent] = useState<TopicContent | null>(null)
   const [videoId, setVideoId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [courseInfo, setCourseInfo] = useState<CourseInfo | null>(null)
+
+  // Load course info from localStorage
+  useEffect(() => {
+    const courseInfoStr = localStorage.getItem('courseInfo');
+    if (courseInfoStr) {
+      try {
+        const info = JSON.parse(courseInfoStr);
+        setCourseInfo(info);
+      } catch (error) {
+        console.error('Error parsing course info:', error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -116,7 +137,14 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
     >
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">{selectedTopic}</h1>
-        <span className="text-sm text-muted-foreground">{selectedSubject}</span>
+        <div className="text-sm text-muted-foreground flex flex-col items-end">
+          <span>{selectedSubject}</span>
+          {courseInfo && (
+            <span className="mt-1">
+              {courseInfo.difficulty} • {courseInfo.educationLevel}
+            </span>
+          )}
+        </div>
       </div>
       
       {videoId && (
@@ -143,6 +171,17 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
             <h3 className="text-lg font-semibold mb-2">Visual Representation</h3>
             <p className="text-muted-foreground">{content.imagePrompt}</p>
           </motion.div>
+        )}
+
+        {courseInfo && (
+          <div className="mt-8 pt-6 border-t flex justify-between text-sm text-muted-foreground">
+            <div>
+              Created: {new Date(courseInfo.createdAt).toLocaleDateString()}
+            </div>
+            <div>
+              Level: {courseInfo.educationLevel}
+            </div>
+          </div>
         )}
       </Card>
     </motion.div>
