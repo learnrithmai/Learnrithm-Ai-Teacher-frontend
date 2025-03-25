@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 interface Topic {
   name: string;
@@ -35,6 +36,7 @@ export default function SubjectsTopicsPage() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [topics, setTopics] = useState<Topic[]>([]);
 
   useEffect(() => {
@@ -46,32 +48,31 @@ export default function SubjectsTopicsPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            subject: "Mathematics", // Get this from your app state/route params
+            subject: "Mathematics",
             difficulty: "medium",
             count: 5
           }),
         });
 
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
         
         if (data.success) {
           setTopics(data.data.topics);
-          // Auto-expand first topic
           if (data.data.topics.length > 0) {
             setExpandedTopics([data.data.topics[0].name]);
           }
         } else {
-          toast({
-            title: "Error",
-            description: data.message || "Failed to generate topics",
-            variant: "destructive",
-          });
+          throw new Error(data.message || "Failed to generate topics");
         }
       } catch (error) {
         console.error("Error fetching topics:", error);
         toast({
           title: "Error",
-          description: "Failed to load topics",
+          description: "Failed to load topics. Please try again.",
           variant: "destructive",
         });
       } finally {
@@ -109,54 +110,83 @@ export default function SubjectsTopicsPage() {
     }
 
     setGenerating(true);
+    setProgress(0);
+    const generatedContent: GeneratedContent[] = [];
+    const totalTopics = selectedTopics.length;
+
     try {
-      const generatedContent: GeneratedContent[] = [];
-      
-      // Generate content for each selected topic
-      for (const subtopic of selectedTopics) {
+      for (let i = 0; i < selectedTopics.length; i++) {
+        const subtopic = selectedTopics[i];
         const topic = topics.find(t => t.subtopics.includes(subtopic));
         if (!topic) continue;
 
-        const response = await fetch('/api/generate-content', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            mainTopic: topic.name,
-            subtopicTitle: subtopic,
-            contentType: "Text & Image Course",
-            educationLevel: "university", // Get this from your app state
-            language: "English",
-            selectedLevel: "medium"
-          }),
-        });
+        try {
+          const response = await fetch('/api/generate-content', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              mainTopic: topic.name,
+              subtopicTitle: subtopic,
+              contentType: "Text & Image Course",
+              educationLevel: "university",
+              language: "English",
+              selectedLevel: "medium"
+            }),
+          });
 
-        const data = await response.json();
-        if (data.success) {
-          generatedContent.push({
-            name: subtopic,
-            mainTopic: topic.name,
-            content: data.content as TopicContent
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (data.success && data.content) {
+            generatedContent.push({
+              name: subtopic,
+              mainTopic: topic.name,
+              content: data.content as TopicContent
+            });
+
+            // Update progress
+            const currentProgress = Math.round(((i + 1) / totalTopics) * 100);
+            setProgress(currentProgress);
+
+            toast({
+              title: "Progress",
+              description: `Generated content for ${subtopic} (${currentProgress}%)`,
+            });
+          }
+        } catch (error) {
+          console.error(`Error generating content for ${subtopic}:`, error);
+          toast({
+            title: "Warning",
+            description: `Failed to generate content for ${subtopic}. Continuing with remaining topics...`,
+            variant: "destructive",
           });
         }
       }
 
-      // Store generated content in localStorage
-      localStorage.setItem('generatedTopics', JSON.stringify(generatedContent));
-
-      // Navigate to courses page
-      router.push('/create/topics/courses');
-      
+      if (generatedContent.length > 0) {
+        localStorage.setItem('generatedTopics', JSON.stringify(generatedContent));
+        toast({
+          title: "Success",
+          description: `Successfully generated ${generatedContent.length} topics`,
+        });
+        router.push('/create/topics/courses');
+      } else {
+        throw new Error("No content was generated successfully");
+      }
     } catch (error) {
-      console.error("Error generating content:", error);
+      console.error("Error in content generation:", error);
       toast({
         title: "Error",
-        description: "Failed to generate course content",
+        description: error instanceof Error ? error.message : "Failed to generate content",
         variant: "destructive",
       });
     } finally {
       setGenerating(false);
+      setProgress(0);
     }
   };
 
@@ -240,13 +270,22 @@ export default function SubjectsTopicsPage() {
           </AnimatePresence>
         </div>
 
+        {generating && (
+          <div className="space-y-2">
+            <Progress value={progress} className="w-full" />
+            <p className="text-center text-sm text-muted-foreground">
+              Generating content... {progress}%
+            </p>
+          </div>
+        )}
+
         <div className="flex justify-between mt-8">
           <Button variant="outline" onClick={() => router.push("/create")}>
             Back
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={generating}
+            disabled={generating || selectedTopics.length === 0}
           >
             {generating ? (
               <>

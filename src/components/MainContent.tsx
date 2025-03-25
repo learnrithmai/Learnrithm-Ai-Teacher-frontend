@@ -12,43 +12,31 @@ interface MainContentProps {
   selectedTopic: string | null
 }
 
+interface TopicContent {
+  theory: string;
+  videoQuery?: string;
+  imagePrompt?: string;
+  type: string;
+}
+
 export default function MainContent({ selectedSubject, selectedTopic }: MainContentProps) {
-  const [content, setContent] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
+  const [content, setContent] = useState<TopicContent | null>(null)
 
   useEffect(() => {
-    const fetchContent = async () => {
-      if (selectedTopic) {
-        setLoading(true)
-        try {
-          const response = await fetch('/api/generate-content', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              mainTopic: selectedTopic,
-              contentType: "Text & Image Course",
-              educationLevel: "university",
-              language: "English",
-              selectedLevel: "medium"
-            }),
-          })
-
-          const data = await response.json()
-          if (data.success) {
-            setContent(data.content)
-          }
-        } catch (error) {
-          console.error("Error fetching content:", error)
-        } finally {
-          setLoading(false)
+    if (selectedSubject && selectedTopic) {
+      // Load content from localStorage
+      const savedTopics = localStorage.getItem('generatedTopics')
+      if (savedTopics) {
+        const topics = JSON.parse(savedTopics)
+        const topicContent = topics.find(
+          (t: any) => t.mainTopic === selectedSubject && t.name === selectedTopic
+        )
+        if (topicContent) {
+          setContent(topicContent.content)
         }
       }
     }
-
-    fetchContent()
-  }, [selectedTopic])
+  }, [selectedSubject, selectedTopic])
 
   if (!selectedSubject || !selectedTopic) {
     return (
@@ -60,7 +48,7 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
     )
   }
 
-  if (loading) {
+  if (!content) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -77,34 +65,32 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
     >
       <h1 className="text-3xl font-bold">{selectedTopic}</h1>
       
-      {content && (
-        <Card className="p-6">
-          <div className="prose dark:prose-invert max-w-none">
-            <ReactMarkdown>{content.theory}</ReactMarkdown>
+      <Card className="p-6">
+        <div className="prose dark:prose-invert max-w-none">
+          <ReactMarkdown>{content.theory}</ReactMarkdown>
+        </div>
+        
+        {content.videoQuery && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-2">Related Video Content</h3>
+            <Button
+              onClick={() => window.open(
+                `https://www.youtube.com/results?search_query=${encodeURIComponent(content.videoQuery ?? '')}`,
+                '_blank'
+              )}
+            >
+              Watch on YouTube
+            </Button>
           </div>
-          
-          {content.videoQuery && (
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-2">Related Video Content</h3>
-              <Button
-                onClick={() => window.open(
-                  `https://www.youtube.com/results?search_query=${encodeURIComponent(content.videoQuery)}`,
-                  '_blank'
-                )}
-              >
-                Watch on YouTube
-              </Button>
-            </div>
-          )}
+        )}
 
-          {content.imagePrompt && (
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-2">Visual Representation</h3>
-              <p className="text-muted-foreground">{content.imagePrompt}</p>
-            </div>
-          )}
-        </Card>
-      )}
+        {content.imagePrompt && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-2">Visual Representation</h3>
+            <p className="text-muted-foreground">{content.imagePrompt}</p>
+          </div>
+        )}
+      </Card>
     </motion.div>
   )
 }

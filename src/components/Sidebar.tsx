@@ -9,19 +9,43 @@ interface SidebarProps {
   onTopicSelect: (subject: string, topic: string) => void
 }
 
+interface GeneratedContent {
+  name: string;
+  mainTopic: string;
+  content: {
+    theory: string;
+    videoQuery?: string;
+    imagePrompt?: string;
+    type: string;
+  };
+}
+
 export default function Sidebar({ onSubjectSelect, onTopicSelect }: SidebarProps) {
-  const [topics, setTopics] = useState<any[]>([])
+  const [topics, setTopics] = useState<GeneratedContent[]>([])
   const [expandedTopics, setExpandedTopics] = useState<string[]>([])
+  const [groupedTopics, setGroupedTopics] = useState<Record<string, GeneratedContent[]>>({})
 
   useEffect(() => {
     // Load generated topics from localStorage
     const savedTopics = localStorage.getItem('generatedTopics')
     if (savedTopics) {
-      setTopics(JSON.parse(savedTopics))
-      // Auto-expand first topic
-      const parsedTopics = JSON.parse(savedTopics)
-      if (parsedTopics.length > 0) {
-        setExpandedTopics([parsedTopics[0].name])
+      const parsedTopics: GeneratedContent[] = JSON.parse(savedTopics)
+      setTopics(parsedTopics)
+
+      // Group topics by mainTopic
+      const grouped = parsedTopics.reduce((acc, topic) => {
+        if (!acc[topic.mainTopic]) {
+          acc[topic.mainTopic] = [];
+        }
+        acc[topic.mainTopic].push(topic);
+        return acc;
+      }, {} as Record<string, GeneratedContent[]>);
+
+      setGroupedTopics(grouped);
+
+      // Auto-expand first topic if exists
+      if (Object.keys(grouped).length > 0) {
+        setExpandedTopics([Object.keys(grouped)[0]])
       }
     }
   }, [])
@@ -37,34 +61,34 @@ export default function Sidebar({ onSubjectSelect, onTopicSelect }: SidebarProps
   return (
     <div className="w-64 h-full bg-background border-r">
       <div className="p-4 space-y-4">
-        {topics.map((topic) => (
-          <div key={topic.name} className="space-y-2">
+        {Object.entries(groupedTopics).map(([mainTopic, topics]) => (
+          <div key={mainTopic} className="space-y-2">
             <Button
               variant="ghost"
               className="w-full justify-between"
-              onClick={() => toggleTopic(topic.name)}
+              onClick={() => toggleTopic(mainTopic)}
             >
               <span className="flex items-center">
                 <Book className="w-4 h-4 mr-2" />
-                {topic.name}
+                {mainTopic}
               </span>
-              {expandedTopics.includes(topic.name) ? 
+              {expandedTopics.includes(mainTopic) ? 
                 <ChevronDown className="w-4 h-4" /> : 
                 <ChevronRight className="w-4 h-4" />
               }
             </Button>
 
-            {expandedTopics.includes(topic.name) && (
+            {expandedTopics.includes(mainTopic) && (
               <div className="ml-4 space-y-1">
-                {topic.subtopics?.map((subtopic: string) => (
+                {topics.map((topic) => (
                   <Button
-                    key={subtopic}
+                    key={topic.name}
                     variant="ghost"
                     size="sm"
                     className="w-full justify-start"
-                    onClick={() => onTopicSelect(topic.name, subtopic)}
+                    onClick={() => onTopicSelect(mainTopic, topic.name)}
                   >
-                    {subtopic}
+                    {topic.name}
                   </Button>
                 ))}
               </div>
