@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, ChevronRight, Sparkles } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ChevronDown, ChevronRight, Book } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface SidebarProps {
@@ -9,65 +9,69 @@ interface SidebarProps {
   onTopicSelect: (subject: string, topic: string) => void
 }
 
-const subjects = [
-  {
-    name: "Mathematics",
-    topics: ["Algebra", "Geometry", "Calculus"],
-  },
-  {
-    name: "Science",
-    topics: ["Biology", "Chemistry", "Physics"],
-  },
-  {
-    name: "Language Arts",
-    topics: ["Grammar", "Literature", "Writing"],
-  },
-]
-
 export default function Sidebar({ onSubjectSelect, onTopicSelect }: SidebarProps) {
-  const [openSubject, setOpenSubject] = useState<string | null>(null)
+  const [topics, setTopics] = useState<any[]>([])
+  const [expandedTopics, setExpandedTopics] = useState<string[]>([])
 
-  const handleSubjectClick = (subjectName: string) => {
-    setOpenSubject(openSubject === subjectName ? null : subjectName)
-    onSubjectSelect(subjectName)
+  useEffect(() => {
+    // Load generated topics from localStorage
+    const savedTopics = localStorage.getItem('generatedTopics')
+    if (savedTopics) {
+      setTopics(JSON.parse(savedTopics))
+      // Auto-expand first topic
+      const parsedTopics = JSON.parse(savedTopics)
+      if (parsedTopics.length > 0) {
+        setExpandedTopics([parsedTopics[0].name])
+      }
+    }
+  }, [])
+
+  const toggleTopic = (topicName: string) => {
+    setExpandedTopics(prev =>
+      prev.includes(topicName)
+        ? prev.filter(t => t !== topicName)
+        : [...prev, topicName]
+    )
   }
 
   return (
-    <nav className="w-64 h-full bg-background border-r border-border overflow-y-auto">
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-4 flex items-center text-blue-600 dark:text-blue-400">
-          <Sparkles className="mr-2" /> Subjects
-        </h2>
-        {subjects.map((subject) => (
-          <div key={subject.name} className="mb-2">
+    <div className="w-64 h-full bg-background border-r">
+      <div className="p-4 space-y-4">
+        {topics.map((topic) => (
+          <div key={topic.name} className="space-y-2">
             <Button
               variant="ghost"
-              className="w-full justify-between mb-2 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/20 dark:hover:text-blue-400"
-              onClick={() => handleSubjectClick(subject.name)}
+              className="w-full justify-between"
+              onClick={() => toggleTopic(topic.name)}
             >
-              {subject.name}
-              {openSubject === subject.name ? <ChevronDown className="ml-2" /> : <ChevronRight className="ml-2" />}
+              <span className="flex items-center">
+                <Book className="w-4 h-4 mr-2" />
+                {topic.name}
+              </span>
+              {expandedTopics.includes(topic.name) ? 
+                <ChevronDown className="w-4 h-4" /> : 
+                <ChevronRight className="w-4 h-4" />
+              }
             </Button>
-            {openSubject === subject.name && (
-              <ul className="ml-4 space-y-2">
-                {subject.topics.map((topic) => (
-                  <li key={topic}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/20 dark:hover:text-blue-400"
-                      onClick={() => onTopicSelect(subject.name, topic)}
-                    >
-                      {topic}
-                    </Button>
-                  </li>
+
+            {expandedTopics.includes(topic.name) && (
+              <div className="ml-4 space-y-1">
+                {topic.subtopics?.map((subtopic: string) => (
+                  <Button
+                    key={subtopic}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => onTopicSelect(topic.name, subtopic)}
+                  >
+                    {subtopic}
+                  </Button>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         ))}
       </div>
-    </nav>
+    </div>
   )
 }
-
