@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, ChevronRight, Sparkles } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ChevronDown, ChevronRight, Book } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface SidebarProps {
@@ -9,65 +9,93 @@ interface SidebarProps {
   onTopicSelect: (subject: string, topic: string) => void
 }
 
-const subjects = [
-  {
-    name: "Mathematics",
-    topics: ["Algebra", "Geometry", "Calculus"],
-  },
-  {
-    name: "Science",
-    topics: ["Biology", "Chemistry", "Physics"],
-  },
-  {
-    name: "Language Arts",
-    topics: ["Grammar", "Literature", "Writing"],
-  },
-]
+interface GeneratedContent {
+  name: string;
+  mainTopic: string;
+  content: {
+    theory: string;
+    videoQuery?: string;
+    imagePrompt?: string;
+    type: string;
+  };
+}
 
 export default function Sidebar({ onSubjectSelect, onTopicSelect }: SidebarProps) {
-  const [openSubject, setOpenSubject] = useState<string | null>(null)
+  const [topics, setTopics] = useState<GeneratedContent[]>([])
+  const [expandedTopics, setExpandedTopics] = useState<string[]>([])
+  const [groupedTopics, setGroupedTopics] = useState<Record<string, GeneratedContent[]>>({})
 
-  const handleSubjectClick = (subjectName: string) => {
-    setOpenSubject(openSubject === subjectName ? null : subjectName)
-    onSubjectSelect(subjectName)
+  useEffect(() => {
+    // Load generated topics from localStorage
+    const savedTopics = localStorage.getItem('generatedTopics')
+    if (savedTopics) {
+      const parsedTopics: GeneratedContent[] = JSON.parse(savedTopics)
+      setTopics(parsedTopics)
+
+      // Group topics by mainTopic
+      const grouped = parsedTopics.reduce((acc, topic) => {
+        if (!acc[topic.mainTopic]) {
+          acc[topic.mainTopic] = [];
+        }
+        acc[topic.mainTopic].push(topic);
+        return acc;
+      }, {} as Record<string, GeneratedContent[]>);
+
+      setGroupedTopics(grouped);
+
+      // Auto-expand first topic if exists
+      if (Object.keys(grouped).length > 0) {
+        setExpandedTopics([Object.keys(grouped)[0]])
+      }
+    }
+  }, [])
+
+  const toggleTopic = (topicName: string) => {
+    setExpandedTopics(prev =>
+      prev.includes(topicName)
+        ? prev.filter(t => t !== topicName)
+        : [...prev, topicName]
+    )
   }
 
   return (
-    <nav className="w-64 h-full bg-background border-r border-border overflow-y-auto">
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-4 flex items-center text-blue-600 dark:text-blue-400">
-          <Sparkles className="mr-2" /> Subjects
-        </h2>
-        {subjects.map((subject) => (
-          <div key={subject.name} className="mb-2">
+    <div className="w-64 h-full bg-background border-r">
+      <div className="p-4 space-y-4">
+        {Object.entries(groupedTopics).map(([mainTopic, topics]) => (
+          <div key={mainTopic} className="space-y-2">
             <Button
               variant="ghost"
-              className="w-full justify-between mb-2 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/20 dark:hover:text-blue-400"
-              onClick={() => handleSubjectClick(subject.name)}
+              className="w-full justify-between"
+              onClick={() => toggleTopic(mainTopic)}
             >
-              {subject.name}
-              {openSubject === subject.name ? <ChevronDown className="ml-2" /> : <ChevronRight className="ml-2" />}
+              <span className="flex items-center">
+                <Book className="w-4 h-4 mr-2" />
+                {mainTopic}
+              </span>
+              {expandedTopics.includes(mainTopic) ? 
+                <ChevronDown className="w-4 h-4" /> : 
+                <ChevronRight className="w-4 h-4" />
+              }
             </Button>
-            {openSubject === subject.name && (
-              <ul className="ml-4 space-y-2">
-                {subject.topics.map((topic) => (
-                  <li key={topic}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/20 dark:hover:text-blue-400"
-                      onClick={() => onTopicSelect(subject.name, topic)}
-                    >
-                      {topic}
-                    </Button>
-                  </li>
+
+            {expandedTopics.includes(mainTopic) && (
+              <div className="ml-4 space-y-1">
+                {topics.map((topic) => (
+                  <Button
+                    key={topic.name}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => onTopicSelect(mainTopic, topic.name)}
+                  >
+                    {topic.name}
+                  </Button>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         ))}
       </div>
-    </nav>
+    </div>
   )
 }
-
