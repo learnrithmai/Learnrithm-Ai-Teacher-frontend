@@ -45,12 +45,15 @@ export type ClientUserSchema = {
     id: string,
     Name: string,
     email: string,
-    method: string,
-    lastLogin: string,
+    method: 'normal' | 'google',
+    lastLogin?: string,
     imgThumbnail?: string,
     token: {
-        accessToken: string,
+        accessToken: {
+            token: string;
+            expires: Date;
+        },
         refreshToken: string,
-        tokenExpiry: number
+        tokenExpiry: Date
     }
 }
