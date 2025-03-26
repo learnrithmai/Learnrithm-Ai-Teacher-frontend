@@ -23,8 +23,8 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
-      const mode = formData.get('mode') as string || 'study';
-      const prompt = formData.get('prompt') as string || '';
+      const mode = (formData.get('mode') as string) || 'study';
+      const prompt = (formData.get('prompt') as string) || '';
 
       if (!file) {
         return NextResponse.json(
@@ -41,10 +41,10 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
         );
       }
 
-      // Get file data as array buffer and process directly
+      // Get file data as an array buffer and process directly
       const fileArrayBuffer = await file.arrayBuffer();
       
-      // If user provided a specific prompt, use it to guide the analysis
+      // Enhance mode with prompt if provided
       let effectiveMode = mode;
       if (prompt) {
         effectiveMode = `${mode} with additional instructions: ${prompt}`;
@@ -54,7 +54,7 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
         fileArrayBuffer,
         file.name,
         file.type,
-        effectiveMode // Pass the enhanced mode with user prompt if provided
+        effectiveMode
       );
 
       // Ensure analysisType is one of the allowed types
@@ -72,7 +72,7 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
         }
       });
     }
-    // Handle JSON
+    // Handle JSON requests
     else if (contentType.includes('application/json')) {
       const { text, mode = 'study', prompt = '' } = await request.json();
       
@@ -83,10 +83,10 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
         );
       }
       
-      // Process text directly
+      // Convert text to buffer
       const buffer = Buffer.from(text);
       
-      // If user provided a specific prompt, use it to guide the analysis
+      // Enhance mode with prompt if provided
       let effectiveMode = mode;
       if (prompt) {
         effectiveMode = `${mode} with additional instructions: ${prompt}`;
@@ -106,8 +106,7 @@ export async function POST(request: Request): Promise<NextResponse<AnalysisRespo
           analysisType: analysisResult.analysisType as 'text' | 'vision' | 'data'
         }
       });
-    }
-    else {
+    } else {
       return NextResponse.json(
         { success: false, error: 'Unsupported content type' },
         { status: 400 }

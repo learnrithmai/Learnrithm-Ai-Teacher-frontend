@@ -23,9 +23,9 @@ export const envSchema = z.object({
   // JWT
   JWT_SECRET: stringNonEmpty(),
 
- // Google Config
+  // Google Config
   GOOGLE_CLIENT_ID: stringNonEmpty(),
-  GOOGLE_CLIENT_SECRET:stringNonEmpty(),
+  GOOGLE_CLIENT_SECRET: stringNonEmpty(),
   GOOGLE_REDIRECT_URI: stringNonEmpty(),
 
   // Keywords
@@ -40,6 +40,10 @@ export const envSchema = z.object({
   ),
   ZOHO_SMTP_USERNAME: stringNonEmpty().email(),
   ZOHO_SMTP_PASSWORD: stringNonEmpty(),
+
+  // OpenAI API Key
+  OPENAI_API_KEY: stringNonEmpty(),
+  ADMIN_API_KEY: stringNonEmpty(),
 });
 
 // Infer ENV type from the schema

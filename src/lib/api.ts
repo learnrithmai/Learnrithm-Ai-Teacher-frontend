@@ -110,12 +110,7 @@ export async function processChatRequest(
 
     return NextResponse.json(responseData);
   } catch (error) {
-    const formattedError = handleOpenAIError(error as { 
-      response?: { status: number; data?: { error?: { message?: string } } }; 
-      request?: unknown; 
-      cause?: { code?: string }; 
-      message?: string; 
-    });
+    const formattedError = handleOpenAIError(error as { response?: { status: number; data?: { error?: { message?: string } } }; request?: XMLHttpRequest; cause?: { code?: string }; message?: string });
     return NextResponse.json(
       { error: formattedError.message },
       { status: formattedError.status }

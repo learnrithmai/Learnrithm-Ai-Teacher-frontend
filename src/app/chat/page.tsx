@@ -48,7 +48,7 @@ export default function Home() {
   const chatsByDate = groupChatsByDate(chats);
 
   // Handle file analysis completion
-  const handleFileAnalysisComplete = (fileId: string, analysis: any) => {
+  const handleFileAnalysisComplete = (fileId: string, analysis: { summary: string; content?: string }) => {
     setFilePreview(prev => 
       prev.map(file => 
         file.id === fileId 

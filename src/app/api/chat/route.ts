@@ -1,73 +1,117 @@
 import { NextResponse } from 'next/server';
-import { OpenAIRequestBody } from '@/types/openai';
-import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 import https from 'https';
+import { OpenAIRequestBody, ChatMessage } from '@/types/openai';
+import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
+import { ENV } from '@/types/envSchema';
 
-// Create a custom HTTPS agent with relaxed SSL options for troubleshooting
+// =====================
+// Configuration
+// =====================
+const CONFIG = {
+  keywordsApiKey: ENV.KEYWORDS_API_KEY || '',
+  allowInsecureSSL: process.env.ALLOW_INSECURE_SSL === 'true',
+  environment: process.env.NODE_ENV || 'development'
+};
+
+// Create a custom HTTPS agent (only on the server side)
 const httpsAgent = new https.Agent({
-  rejectUnauthorized: false, // Only use during development/debugging
+  rejectUnauthorized: !CONFIG.allowInsecureSSL,
 });
 
-// Function to log to Keywords AI using their API - now with enhanced token data
-async function logToKeywordsAI(
-  model: string, 
-  promptMessages: any[], 
-  completionMessage: any, 
-  generationTime: number, 
-  userId?: string,
-  tokenData?: {
-    tokens?: {
-      prompt?: number,
-      completion?: number,
-      total?: number
-    }
-  }
-) {
+// =====================
+// Logging Helpers
+// =====================
+interface LogTokens {
+  prompt?: number;
+  completion?: number;
+  total?: number;
+}
+
+interface LogParams {
+  model: string;
+  promptMessages: ChatMessage[];
+  completionMessage: unknown;
+  generationTime: number;
+  userId: string;
+  tokens?: LogTokens;
+}
+
+async function logToKeywordsAI({
+  model,
+  promptMessages,
+  completionMessage,
+  generationTime,
+  userId,
+  tokens,
+}: LogParams) {
   try {
-    // Log to Keywords AI
-    const response = await fetch('https://api.keywordsai.co/api/request-logs/create/', {
+    const res = await fetch('https://api.keywordsai.co/api/request-logs/create/', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.KEYWORDS_API_KEY}`,
+        'Authorization': `Bearer ${CONFIG.keywordsApiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: model,
+        model,
         prompt_messages: promptMessages,
         completion_message: completionMessage,
         generation_time: generationTime,
-        user_id: userId || 'anonymous',
-        // Add token usage data if available
-        prompt_tokens: tokenData?.tokens?.prompt || 0,
-        completion_tokens: tokenData?.tokens?.completion || 0,
-        total_tokens: tokenData?.tokens?.total || 0,
-        // Add any other metadata you want to track
+        user_id: userId,
+        prompt_tokens: tokens?.prompt || 0,
+        completion_tokens: tokens?.completion || 0,
+        total_tokens: tokens?.total || 0,
         application: 'learnrithm-ai-teacher',
-        environment: process.env.NODE_ENV || 'development'
+        environment: CONFIG.environment
       })
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`Keywords AI logging error: ${response.status} - ${errorData}`);
+    if (!res.ok) {
+      const errorData = await res.text();
+      console.error(`[Keywords AI] Logging error: ${res.status} - ${errorData}`);
     } else {
-      console.log('Successfully logged to Keywords AI');
+      console.log('[Keywords AI] Successfully logged');
     }
   } catch (error) {
-    // Don't fail the main request if logging fails
-    console.error('Error logging to Keywords AI:', error);
+    console.error('[Keywords AI] Logging exception:', error);
   }
 }
 
+async function logResponse(
+  responseData: { model?: string; content?: string; usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } },
+  mode: string,
+  messages: ChatMessage[],
+  userId: string,
+  startTime: number
+) {
+  const generationTime = (Date.now() - startTime) / 1000;
+  await logToKeywordsAI({
+    model: responseData?.model || `${mode}-openai`,
+    promptMessages: messages,
+    completionMessage: { role: 'assistant', content: responseData?.content || '' },
+    generationTime,
+    userId,
+    tokens: {
+      prompt: responseData?.usage?.prompt_tokens || 0,
+      completion: responseData?.usage?.completion_tokens || 0,
+      total: responseData?.usage?.total_tokens || 0
+    }
+  });
+}
+
+// =====================
+// Main API Handler
+// =====================
 export async function POST(request: Request) {
   const startTime = Date.now();
-  
   try {
-    const body = await request.json() as OpenAIRequestBody;
-    
-    // Extract user info for logging
-    const userId = request.headers.get('x-user-id') || (body as any).userId || 'anonymous';
-    
+    const body = (await request.json()) as OpenAIRequestBody;
+
+    // Extract user info from header or body
+    const userId =
+      request.headers.get('x-user-id') ||
+      (body as { userId?: string }).userId ||
+      'anonymous';
+
     // Validate request body
     const validation = validateChatRequest(body);
     if (!validation.isValid) {
@@ -77,153 +121,101 @@ export async function POST(request: Request) {
       );
     }
 
-    // Normalize mode to lowercase for consistency
+    // Normalize mode to lowercase
     const mode = body.mode?.toLowerCase();
-    let responseData: any = null;
+    let responseData: { model?: string; content?: string; usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } } | null = null;
 
     // Choose the appropriate mode handler
     switch (mode) {
       case 'reason':
       case 'quiz':
       case 'study':
-      case 'homeworkhelper':
+      case 'homeworkhelper': {
         try {
-          // Redirect to the specific mode endpoint with SSL error handling
-          const response = await fetch(new URL(`/api/chat/${mode}`, request.url), {
+          // Redirect to the specific mode endpoint with custom HTTPS agent
+          const modeURL = new URL(`/api/chat/${mode}`, request.url);
+          const res = await fetch(modeURL, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-user-id': userId, // Pass user ID to mode endpoint
+              'x-user-id': userId,
             },
             body: JSON.stringify(body),
-            // @ts-ignore - Node.js specific option
+            // @ts-expect-error - Node.js specific option for server-side only
             agent: typeof window === 'undefined' ? httpsAgent : undefined,
           });
-          
-          responseData = await response.json();
-          
-          // Log to Keywords AI after completion
-          const endTime = Date.now();
-          const generationTime = (endTime - startTime) / 1000; // Convert to seconds
-          
-          await logToKeywordsAI(
-            responseData.model || `${mode}-openai`, // Get actual model if available
-            body.messages,
-            { role: 'assistant', content: responseData.content },
-            generationTime,
-            userId,
-            {
-              tokens: {
-                prompt: responseData.usage?.prompt_tokens || 0,
-                completion: responseData.usage?.completion_tokens || 0,
-                total: responseData.usage?.total_tokens || 0
-              }
-            }
-          );
-          
+          responseData = await res.json();
+
+          if (responseData) {
+            await logResponse(responseData, mode, body.messages, userId, startTime);
+          }
           return NextResponse.json(responseData);
-        } catch (fetchError: any) {
+        } catch (fetchError: unknown) {
           console.error(`Error calling ${mode} endpoint:`, fetchError);
-          
-          // Fall back to default processing if mode-specific endpoint fails
+          // Fall back to default processing for this mode
           console.log(`Falling back to default processing for ${mode} mode`);
           const fallbackMessages = addSystemPrompt(body.messages, mode);
-          
-          const fallbackStartTime = Date.now();
-          responseData = await processChatRequest(fallbackMessages, {
+          const fallbackStart = Date.now();
+          const fallbackRes = await processChatRequest(fallbackMessages, {
             max_tokens: body.max_tokens || 1000,
             temperature: 0.7,
           });
-          
-          // Log fallback to Keywords AI
-          const fallbackEndTime = Date.now();
-          const fallbackGenerationTime = (fallbackEndTime - fallbackStartTime) / 1000;
-          
-          await logToKeywordsAI(
-            responseData.model || `${mode}-fallback-openai`,
-            fallbackMessages,
-            { role: 'assistant', content: responseData.content },
-            fallbackGenerationTime,
-            userId,
-            {
-              tokens: {
-                prompt: responseData.usage?.prompt_tokens || 0,
-                completion: responseData.usage?.completion_tokens || 0,
-                total: responseData.usage?.total_tokens || 0
-              }
-            }
-          );
-          
-          return responseData;
+          responseData = fallbackRes instanceof NextResponse ? await fallbackRes.json() : fallbackRes;
+
+          if (responseData) {
+            await logResponse(responseData, `${mode}-fallback`, fallbackMessages, userId, fallbackStart);
+          }
+          return NextResponse.json(responseData);
         }
-        
-      default:
+      }
+      default: {
         // Default chat behavior (no specific mode)
-        // Add default system prompt
         const messages = addSystemPrompt(body.messages, 'default');
-        
-        const defaultStartTime = Date.now();
-        responseData = await processChatRequest(messages, {
+        const defaultStart = Date.now();
+        const result = await processChatRequest(messages, {
           max_tokens: body.max_tokens || 1000,
           temperature: 0.7,
         });
-        
-        // Log default processing to Keywords AI with token data
-        const defaultEndTime = Date.now();
-        const defaultGenerationTime = (defaultEndTime - defaultStartTime) / 1000;
-        
-        await logToKeywordsAI(
-          responseData.model || 'default-openai',
-          messages,
-          { role: 'assistant', content: responseData.content },
-          defaultGenerationTime,
-          userId,
-          {
-            tokens: {
-              prompt: responseData.usage?.prompt_tokens || 0,
-              completion: responseData.usage?.completion_tokens || 0,
-              total: responseData.usage?.total_tokens || 0
-            }
-          }
-        );
-        
+        responseData = result instanceof NextResponse ? await result.json() : result;
+
+        if (responseData) {
+          await logResponse(responseData, 'default', messages, userId, defaultStart);
+        }
         return NextResponse.json(responseData);
+      }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error processing chat request:', error);
-    
-    // Try to log the error to Keywords AI
-    const endTime = Date.now();
-    const generationTime = (endTime - startTime) / 1000;
-    
+    const generationTime = (Date.now() - startTime) / 1000;
     try {
       const userId = request.headers.get('x-user-id') || 'anonymous';
-      await logToKeywordsAI(
-        'error-openai',
-        [], // We don't have messages in case of error
-        { role: 'assistant', content: `Error: ${error.message}` },
+      await logToKeywordsAI({
+        model: 'error-openai',
+        promptMessages: [],
+        completionMessage: { role: 'assistant', content: `Error: ${error instanceof Error ? error.message : error}` },
         generationTime,
-        userId
-        // No token data for errors
-      );
+        userId,
+      });
     } catch (logError) {
       console.error('Failed to log error to Keywords AI:', logError);
     }
-    
-    // Improved error handling with more details
     let errorMessage = 'An error occurred while processing your request';
     let statusCode = 500;
-    
+
     // Handle specific SSL errors
-    if (error.cause && error.cause.code === 'ERR_SSL_PACKET_LENGTH_TOO_LONG') {
+    if (
+      error instanceof Error &&
+      error.cause &&
+      typeof (error.cause as { code?: string }).code === 'string' &&
+      (error.cause as { code: string }).code === 'ERR_SSL_PACKET_LENGTH_TOO_LONG'
+    ) {
       errorMessage = 'SSL connection error. Please try again or contact support.';
-      statusCode = 502; // Bad Gateway
+      statusCode = 502;
     }
-    
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: CONFIG.environment === 'development' ? (error instanceof Error ? error.message : error) : undefined,
       },
       { status: statusCode }
     );
