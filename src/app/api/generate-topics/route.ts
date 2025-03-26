@@ -1,9 +1,10 @@
+import { ENV } from '@/types/envSchema';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: ENV.OPENAI_API_KEY,
 });
 
 // Define the Topic interface

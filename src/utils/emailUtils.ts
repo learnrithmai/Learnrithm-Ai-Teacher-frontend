@@ -54,7 +54,7 @@ export const sendContactEmail = async (
             ? `Learnrithm AI <${ENV.ZOHO_SMTP_USERNAME}>`
             : "support@learnrithm.com",
         // Route the contact message to a dedicated receiver.
-        to: process.env.CONTACT_US_RECEIVER || "contact@learnrithm.com",
+        to: "contact@learnrithm.com",
         subject,
         html: htmlContent,
         attachments,

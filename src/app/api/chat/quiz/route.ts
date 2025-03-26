@@ -5,7 +5,7 @@ import { trimConversationHistory } from '@/lib/tokenManagement';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as OpenAIRequestBody;
+    const body = (await request.json()) as OpenAIRequestBody;
     
     // Validate request
     const validation = validateChatRequest(body);
@@ -16,10 +16,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Trim conversation history for token management
-    const trimmedMessages = trimConversationHistory(body.messages, 4000, 2); 
+    // Trim conversation history for token management (with a smaller buffer)
+    const trimmedMessages = trimConversationHistory(body.messages, 4000, 2);
     
-    // Add system message for quiz mode
+    // Add system prompt for quiz mode
     const messages = addSystemPrompt(trimmedMessages, 'quiz');
     
     // Get last user message to determine quiz subject complexity
@@ -27,18 +27,18 @@ export async function POST(request: Request) {
       .reverse()
       .find(m => m.role === 'user')?.content || '';
       
-    // Select model based on complexity
+    // Select model based on complexity keywords in the last user message
     const model = /advanced|complex|graduate|university level|difficult/i.test(lastUserMsg)
       ? "gpt-4o"
       : "gpt-3.5-turbo";
 
     // Process with OpenAI
     return processChatRequest(messages, {
-      max_tokens: body.max_tokens || 1500, // Quizzes need space for questions and answers
+      max_tokens: body.max_tokens || 1500, // Quizzes need space for both questions and answers
       temperature: 0.8, // Higher creativity for diverse quiz questions
       model: model,
       mode: 'quiz',
-      useCache: true // Caching is fine for quizzes on the same topic
+      useCache: true // Caching can be used for quizzes on the same topic
     });
   } catch (error) {
     console.error('Error in quiz mode:', error);

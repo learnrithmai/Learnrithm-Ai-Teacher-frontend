@@ -1,3 +1,6 @@
+import { LucideProps } from "lucide-react";
+
+
 export interface Message {
   id: string;
   content: string;
@@ -34,7 +37,7 @@ export interface ChatsByDate {
 export interface Mode {
   id: string;
   name: string;
-  icon: React.ComponentType<unknown>; // Updated to accept React components
+  icon: React.ComponentType<LucideProps>; // Updated to accept React components
 }
 
 export interface FileProcessingRequest {

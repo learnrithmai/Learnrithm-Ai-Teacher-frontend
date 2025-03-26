@@ -28,9 +28,9 @@ export function ChatInput({
   onRemoveFile, 
   onSend, 
   onModeSelect,
-  onFileAnalysisComplete
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [processingFiles, setProcessingFiles] = useState<string[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
 
@@ -56,7 +56,7 @@ export function ChatInput({
   return (
     <div className="border-t border-gray-200 p-4">
       <div className="max-w-3xl mx-auto relative">
-        <input 
+        <Input 
           type="file" 
           ref={fileInputRef} 
           className="hidden" 

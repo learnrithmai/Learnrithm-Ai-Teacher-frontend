@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
-import { OpenAIRequestBody } from '@/types/openai';
+import { ChatMessage, OpenAIRequestBody } from '@/types/openai';
 import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 import { trimConversationHistory } from '@/lib/tokenManagement';
+import { ENV } from '@/types/envSchema';
 
 // Add environment variable or config for Keywords AI API key
-const KEYWORDS_AI_API_KEY = process.env.KEYWORDS_AI_API_KEY || '';
+const KEYWORDS_AI_API_KEY = ENV.KEYWORDS_API_KEY || '';
 
-// Helper function to log request/response to Keywords AI
-async function logToKeywordsAI(params: {
+// Improved TypeScript interface for log function
+interface LogParams {
   model: string;
-  promptMessages: any[];
-  completionMessage: any;
+  promptMessages: ChatMessage[];
+  completionMessage: unknown;
   customerParams?: {
     customer_identifier?: string;
     name?: string;
@@ -19,7 +20,10 @@ async function logToKeywordsAI(params: {
   cost?: number;
   generationTime?: number;
   ttft?: number;
-}) {
+}
+
+// Helper function to log request/response to Keywords AI
+async function logToKeywordsAI(params: LogParams) {
   try {
     const url = 'https://api.keywordsai.co/api/request-logs/create/';
     const response = await fetch(url, {
@@ -40,11 +44,10 @@ async function logToKeywordsAI(params: {
     });
     
     if (!response.ok) {
-      console.warn('Failed to log to Keywords AI:', await response.text());
+      console.warn('[Keywords AI] Failed to log:', await response.text());
     }
   } catch (error) {
-    // Non-blocking - just log the error without affecting the main flow
-    console.warn('Error logging to Keywords AI:', error);
+    console.warn('[Keywords AI] Logging error:', error);
   }
 }
 
@@ -81,19 +84,23 @@ export async function POST(request: Request) {
 
     // Process with OpenAI
     const response = await processChatRequest(messages, {
-      max_tokens: body.max_tokens || 1500, // Study explanations can be detailed
-      temperature: 0.6, // More factual and structured for learning
+      max_tokens: body.max_tokens || 1500,
+      temperature: 0.6,
       model: model,
       mode: 'study',
-      useCache: true // Cache common study materials
+      useCache: true
     });
-    
+
+    if (!response.ok) {
+      console.error('[OpenAI] Error response:', await response.text());
+      throw new Error('OpenAI response failed.');
+    }
+
+    const responseData = await response.json();
+
     // Get generation time
     const generationTime = (Date.now() - startTime) / 1000;
-    
-    // Extract completion message from response
-    const responseData = await response.json();
-    
+
     // Log to Keywords AI (non-blocking)
     if (KEYWORDS_AI_API_KEY) {
       const completionMessage = {
@@ -101,26 +108,36 @@ export async function POST(request: Request) {
         content: responseData.choices?.[0]?.message?.content || ''
       };
       
-      // Get user ID or other customer info from your auth system if available
-      const userInfo = (body as any).user || {};
+      const userInfo = (body as { user?: { id?: string; name?: string; email?: string } }).user || {};
       
       logToKeywordsAI({
-        model: model,
+        model,
         promptMessages: messages,
-        completionMessage: completionMessage,
+        completionMessage,
         customerParams: {
           customer_identifier: userInfo.id || 'anonymous',
           name: userInfo.name || '',
           email: userInfo.email || ''
         },
-        generationTime: generationTime,
-        // Cost and TTFT would need to be extracted from actual API response if available
+        cost: responseData.usage?.total_tokens || 0,
+        generationTime
       });
     }
-    
-    return response;
+
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Error in study mode:', error);
+    console.error('[Study Mode] Error:', error);
+
+    // Log error details to Keywords AI for tracking failures
+    if (KEYWORDS_AI_API_KEY) {
+      logToKeywordsAI({
+        model: 'unknown',
+        promptMessages: [],
+        completionMessage: { error: error instanceof Error ? error.message : 'Unknown error' },
+        generationTime: (Date.now() - startTime) / 1000
+      });
+    }
+
     return NextResponse.json(
       { error: 'An error occurred while processing your request' },
       { status: 500 }

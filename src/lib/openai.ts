@@ -1,15 +1,16 @@
+import { ENV } from '@/types/envSchema';
 import OpenAI from 'openai';
 
 // Initialize OpenAI client directly
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: ENV.OPENAI_API_KEY,
   dangerouslyAllowBrowser: false, // Ensure server-side only usage
 });
 
 export default openai;
 
 // Helper function to handle OpenAI API errors
-export function handleOpenAIError(error: { response?: { status: number; data?: { error?: { message?: string } } }; request?: unknown; cause?: { code?: string }; message?: string }): { message: string; status: number } {
+export function handleOpenAIError(error: { response?: { status: number; data?: { error?: { message?: string } } }; request?: XMLHttpRequest; cause?: { code?: string }; message?: string }): { message: string; status: number } {
   console.error('OpenAI API Error:', error);
   
   // Check for specific error types
