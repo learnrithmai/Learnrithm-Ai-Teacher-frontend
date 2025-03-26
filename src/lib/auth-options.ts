@@ -1,4 +1,4 @@
-import NextAuth, { NextAuthOptions, User } from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import axios from "axios";
@@ -97,8 +97,8 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       ),
       refreshToken: response.data.refreshToken,
     };
-  } catch (error: any) {
-    logger.error("Failed to refresh access token:", error);
+  } catch (error: unknown) {
+    logger.error("Failed to refresh access token:", error as string);
     return { ...token, error: "RefreshTokenExpired" };
   }
 }
@@ -191,8 +191,8 @@ export const authOptions: NextAuthOptions = {
             }
             return res.data.user;
           }
-        } catch (error: any) {
-          logger.error("Auth provider error:", error);
+        } catch (error: unknown) {
+          logger.error("Auth provider error:", error as string);
           return null;
         }
       },

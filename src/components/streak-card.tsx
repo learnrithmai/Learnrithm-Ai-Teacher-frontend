@@ -74,7 +74,7 @@ export function StreakCard({
               {currentStreak} Day{currentStreak !== 1 ? 's' : ''} Streak!
             </h2>
             <p className="text-sm text-muted-foreground">
-              Keep going! You're doing great! 🎉
+              Keep going! You&apos;re doing great! 🎉
             </p>
           </div>
           <div className="flex gap-2">

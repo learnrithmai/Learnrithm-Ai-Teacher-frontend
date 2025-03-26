@@ -21,6 +21,7 @@ const initialCourses: Course[] = [
 ]
 
 export function Courses() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [courses, setCourses] = useState(initialCourses)
   const [searchTerm, setSearchTerm] = useState("")
 

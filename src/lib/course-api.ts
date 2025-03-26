@@ -3,7 +3,25 @@ import axios from 'axios';
 /**
  * Generates a course structure based on user inputs
  */
-export async function generateCourse(formData: any, language: string, selectedLevel: string, paidMember: boolean) {
+interface CourseFormData {
+  learningMaterials: {
+    pdf: boolean;
+    video: boolean;
+    text: boolean;
+  };
+}
+
+export interface FormData {
+  learningMaterials: {
+    pdf: boolean;
+    video: boolean;
+    text: boolean;
+  };
+  pdf: File | null;
+  [key: string]: string | number | boolean | { pdf: boolean; video: boolean; text: boolean } | File | null | undefined;
+}
+
+export async function generateCourse(formData: CourseFormData, language: string, selectedLevel: string, paidMember: boolean) {
   try {
     const response = await axios.post('/api/generate-course', {
       ...formData,
@@ -53,7 +71,7 @@ export async function generateSubtopicContent(
 export async function saveCourse(
   uid: string,
   email: string,
-  content: any,
+  content: Record<string, unknown>,
   type: string,
   mainTopic: string,
   language: string

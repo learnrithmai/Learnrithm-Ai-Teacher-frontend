@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Book, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { generateCourse } from "@/lib/course-api";
@@ -23,7 +23,6 @@ import { FloatingElements } from "./FloatingElements";
 import { FormData, StepProps } from "@/types/create";
 
 // Constants for API endpoint and steps
-const SERVER_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const steps = ["Course", "Subtopic", "Education Level", "Country", "School", "Curriculum", "Learning Materials", "PDF"];
 
 export default function CreateCoursePage() {
@@ -48,9 +47,8 @@ export default function CreateCoursePage() {
   
   // UI states
   const [processing, setProcessing] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [paidMember, setPaidMember] = useState(false);
-  const [valid, setValid] = useState(true);
-  const [subtopics, setSubtopics] = useState<string[]>([]);
   const [language, setLanguage] = useState("English");
   const [selectedLevel, setSelectedLevel] = useState("easy");
   const [skipSchool, setSkipSchool] = useState(false);
@@ -68,7 +66,7 @@ export default function CreateCoursePage() {
   const curriculumDropdownRef = useRef<HTMLDivElement>(null);
 
   // Update form data handler
-  const updateFormData = (field: string, value: any) => {
+  const updateFormData = (field: keyof FormData, value: string | File | { pdf: boolean; video: boolean; text: boolean; } | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     
     // Reset dependent fields when education level changes
@@ -90,7 +88,7 @@ export default function CreateCoursePage() {
     if (field === "country") {
       setFormData((prev) => ({
         ...prev,
-        [field]: value,
+        [field]: value as string,
         school: "",
       }));
     }
@@ -225,7 +223,7 @@ export default function CreateCoursePage() {
         paidMember
       ) as {
         success: boolean;
-        data?: any;
+        data?: unknown;
         message?: string;
         mainTopic?: string;
         type?: string;
@@ -247,7 +245,7 @@ export default function CreateCoursePage() {
         // Save to localStorage for backup/state persistence
         try {
           localStorage.setItem('courseGenerationData', JSON.stringify(urlData));
-        } catch (e) {
+        } catch {
           console.log('Could not save to localStorage');
         }
         

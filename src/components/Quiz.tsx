@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Card } from "@/components/ui/card"
 import { XCircle, Trophy, Frown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -26,7 +25,7 @@ interface UserAnswer {
   isCorrect: boolean
 }
 
-export default function Quiz({ subject, topic, questions, onComplete }: QuizProps) {
+export default function Quiz({ questions, onComplete }: QuizProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [score, setScore] = useState(0)

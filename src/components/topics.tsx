@@ -52,7 +52,7 @@ export default function SubjectsTopicsPage() {
   // Initialize on mount but don't update it on rerenders
   useEffect(() => {
     subtopicsListRef.current = subtopics.split(',').map(s => s.trim()).filter(Boolean);
-  }, []); // Empty dependency - run once on mount
+  }, [subtopics]); // Empty dependency - run once on mount
   
   const [expandedTopics, setExpandedTopics] = useState<string[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -182,7 +182,7 @@ export default function SubjectsTopicsPage() {
     return () => {
       isMountedRef.current = false;
     };
-  }, []); // Empty dependency array - run once on mount
+  }, [difficulty, educationLevel, router, subject]); // Empty dependency array - run once on mount
 
   const toggleTopic = (topicName: string) => {
     setExpandedTopics(prev =>
@@ -354,7 +354,7 @@ export default function SubjectsTopicsPage() {
         <div className="text-center max-w-md p-8 bg-card rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold mb-4">No Topics Generated</h2>
           <p className="text-muted-foreground mb-6">
-            We couldn't generate any topics for "{subject}". Please try again with different parameters.
+            We couldn&apos;t generate any topics for &quot;{subject}&quot;. Please try again with different parameters.
           </p>
           <Button onClick={() => router.push("/create")}>
             Go Back

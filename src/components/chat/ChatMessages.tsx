@@ -1,7 +1,6 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "@/types/chat";
 import { Message as MessageComponent } from "./Message";
 import { useEffect, useRef, useState } from "react";
@@ -49,6 +48,7 @@ export function ChatMessages({
   }, [messages, isLoading]);
 
   // Function to analyze file content directly from the messages component
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const analyzeFile = async (file: File, mode: string = 'study'): Promise<AnalysisResult | null> => {
     try {
       const formData = new FormData();

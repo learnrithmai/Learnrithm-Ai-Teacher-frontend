@@ -20,7 +20,8 @@ interface GeneratedContent {
   };
 }
 
-export default function Sidebar({ onSubjectSelect, onTopicSelect }: SidebarProps) {
+export default function Sidebar({ onTopicSelect }: SidebarProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [topics, setTopics] = useState<GeneratedContent[]>([])
   const [expandedTopics, setExpandedTopics] = useState<string[]>([])
   const [groupedTopics, setGroupedTopics] = useState<Record<string, GeneratedContent[]>>({})

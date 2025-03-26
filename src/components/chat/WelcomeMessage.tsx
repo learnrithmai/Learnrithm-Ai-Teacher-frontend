@@ -8,13 +8,13 @@ export function WelcomeMessage() {
         <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h2 className="font-medium mb-2"></h2>
           <p className="text-sm text-gray-600">
-            "Explain quantum computing in simple terms"
+            &quot;Explain quantum computing in simple terms&quot;
           </p>
         </div>
         <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
           <h2 className="font-medium mb-2">Example</h2>
           <p className="text-sm text-gray-600">
-            "Got any creative ideas for a 10 year old's birthday?"
+            &quot;Got any creative ideas for a 10 year old&apos;s birthday?&quot;
           </p>
         </div>
       </div>
