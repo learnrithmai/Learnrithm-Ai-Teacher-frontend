@@ -1,8 +1,7 @@
-// auth-options.ts
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import axios, { AxiosResponse } from "axios";
+import axios from "axios";
 import { ENV } from "@/types/envSchema";
 import logger from "@/utils/chalkLogger";
 import { SERVER_API_URL } from "./consts";
@@ -17,18 +16,18 @@ import { ClientUserSchema } from "@/types/userSchema";
 declare module "next-auth" {
   interface Session {
     user: {
-      id: string,
-      Name: string,
-      email: string,
-      method: string,
-      lastLogin: string,
-      imgThumbnail?: string,
+      id: string;
+      Name: string;
+      email: string;
+      method: string;
+      lastLogin: string;
+      imgThumbnail?: string;
     };
     token: {
-      accessToken: string,
-      refreshToken: string,
-      tokenExpiry: number
-    }
+      accessToken: string;
+      refreshToken: string;
+      tokenExpiry: number;
+    };
   }
 }
 
@@ -38,11 +37,12 @@ declare module "next-auth/jwt" {
     Name: string;
     email: string;
     imgThumbnail?: string;
-    method: string,
-    lastLogin: string,
+    method: string;
+    lastLogin: string;
     accessToken: string;
     refreshToken: string;
     tokenExpiry: number;
+    error?: string;
   }
 }
 
@@ -66,32 +66,30 @@ interface AuthApiResponse {
 // Helper: Refresh Access Token via backend refresh endpoint.
 // ----------------------------------------------------------------
 
-
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   if (!token.refreshToken) {
     logger.error("No refresh token available.");
     return { ...token, error: "NoRefreshToken" };
   }
   try {
-    const response = await axios.post<RefreshApiResponse>(
+    const response = await axios.post(
       `${SERVER_API_URL}/auth/refresh-tokens`,
       null,
       {
         headers: { Cookie: `jwt=${token.refreshToken}` },
-        // If your backend expects the refresh token in the body instead, use:
-        // data: { refreshToken: token.refreshToken },
       }
     );
-    const data = response.data;
+    const data = response.data as RefreshApiResponse;
     logger.info("Access token refreshed successfully.");
     return {
       ...token,
       accessToken: data.accessToken.token,
-      tokenExpiry: Date.now() + (data.expiresAt ? data.expiresAt * 1000 : 3600 * 1000),
+      tokenExpiry:
+        Date.now() + (data.expiresAt ? data.expiresAt * 1000 : 3600 * 1000),
       refreshToken: data.refreshToken ?? token.refreshToken,
     };
-  } catch (error) {
-    logger.error("Failed to refresh access token:", error as string);
+  } catch (error: any) {
+    logger.error("Failed to refresh access token:", error);
     return { ...token, error: "RefreshTokenExpired" };
   }
 }
@@ -103,31 +101,43 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 export const authOptions: NextAuthOptions = {
   secret: ENV.JWT_SECRET,
   providers: [
-    // -------------------------------
     // Google Authentication Provider
-    // -------------------------------
     GoogleProvider({
       clientId: ENV.GOOGLE_CLIENT_ID || "",
       clientSecret: ENV.GOOGLE_CLIENT_SECRET || "",
       authorization: {
         params: {
           scope: "openid email profile",
-          access_type: "offline", // to receive a refresh token
-          prompt: "consent",      // forces account selection & consent
+          access_type: "offline",
+          prompt: "consent",
         },
       },
     }),
-    // --------------------------------------------------
     // Credentials Provider for Email/Password Login/Signup
-    // --------------------------------------------------
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "user@example.com" },
+        email: {
+          label: "Email",
+          type: "email",
+          placeholder: "user@example.com",
+        },
         password: { label: "Password", type: "password" },
-        isSignup: { label: "isSignup", type: "text", placeholder: "true or false" },
-        Name: { label: "Name", type: "text", placeholder: "Your Name" },
-        country: { label: "Country", type: "text", placeholder: "Your Country" },
+        isSignup: {
+          label: "isSignup",
+          type: "text",
+          placeholder: "true or false",
+        },
+        Name: {
+          label: "Name",
+          type: "text",
+          placeholder: "Your Name",
+        },
+        country: {
+          label: "Country",
+          type: "text",
+          placeholder: "Your Country",
+        },
         referralCode: {
           label: "Referral code (optional)",
           type: "text",
@@ -139,7 +149,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Missing email or password.");
         }
         const isSignup = credentials.isSignup === "true";
-        let response: AxiosResponse<AuthApiResponse, any> | null = null;
 
         try {
           if (isSignup) {
@@ -153,33 +162,29 @@ export const authOptions: NextAuthOptions = {
               referralCode: credentials.referralCode,
             };
             // SIGNUP: Call the backend /register endpoint.
-            response = await axios.post<AuthApiResponse>(
+            const res = await axios.post(
               `${SERVER_API_URL}/auth/register`,
               dataToSend
             );
-            if (response.status !== 201) {
+            if (res.status !== 201) {
               throw new Error("Sign up failed.");
             }
+            return res.data.user as ClientUserSchema;
           } else {
             // LOGIN: Call the backend /login endpoint.
-            response = await axios.post<AuthApiResponse>(`${SERVER_API_URL}/auth/login`, {
+            const res = await axios.post(`${SERVER_API_URL}/auth/login`, {
               email: credentials.email,
               password: credentials.password,
             });
-            if (response.status !== 200) {
+            if (res.status !== 200) {
               throw new Error("Login failed.");
             }
+            return res.data.user as ClientUserSchema;
           }
-        } catch (error: unknown) {
-          logger.error("Auth provider error:", error as string);
-        }
-
-        if (!response || !response.data) {
+        } catch (error: any) {
+          logger.error("Auth provider error:", error);
           return null;
         }
-
-        // Return the user object with tokens.
-        return response.data.user;
       },
     }),
   ],
@@ -192,8 +197,19 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }): Promise<JWT> {
       // On initial sign-in, the 'user' object is provided.
       if (user) {
-        // Merge user data into the token.
-        return { ...token, ...user } as JWT;
+        const clientUser = user as ClientUserSchema;
+        return {
+          ...token,
+          id: clientUser.id,
+          Name: clientUser.Name,
+          email: clientUser.email,
+          method: clientUser.method,
+          lastLogin: clientUser.lastLogin,
+          imgThumbnail: clientUser.imgThumbnail,
+          accessToken: clientUser.token.accessToken,
+          refreshToken: clientUser.token.refreshToken,
+          tokenExpiry: clientUser.token.tokenExpiry,
+        };
       }
       // If the token still has a valid access token, return it.
       if (token.accessToken && token.tokenExpiry && Date.now() < token.tokenExpiry) {
@@ -208,9 +224,8 @@ export const authOptions: NextAuthOptions = {
     },
     // Session callback attaches token details to the session.
     async session({ session, token }): Promise<typeof session> {
-
       if (!token.Name) {
-        return session
+        return session;
       }
       // Include the user details in the session.
       session.user = {
@@ -218,7 +233,7 @@ export const authOptions: NextAuthOptions = {
         Name: token.Name,
         email: token.email,
         method: token.method,
-        imgThumbnail: token.image as string | undefined,
+        imgThumbnail: token.imgThumbnail,
         lastLogin: token.lastLogin,
       };
       // Include the token details in the session.
