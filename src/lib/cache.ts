@@ -1,7 +1,7 @@
 // Simple in-memory cache for API responses
 
 interface CacheEntry {
-  data: any;
+  data: unknown;
   timestamp: number;
 }
 
@@ -12,7 +12,12 @@ const cache: Record<string, CacheEntry> = {};
 const CACHE_TTL = 5 * 60 * 1000;
 
 // Generate a cache key from the request
-export function generateCacheKey(messages: any[], model: string, mode?: string): string {
+interface Message {
+  role: string;
+  content: string;
+}
+
+export function generateCacheKey(messages: Message[], model: string, mode?: string): string {
   // Create a deterministic string from the request
   const lastUserMessage = [...messages]
     .reverse()
@@ -23,7 +28,7 @@ export function generateCacheKey(messages: any[], model: string, mode?: string):
 }
 
 // Get a cached response if it exists and is fresh
-export function getCachedResponse(cacheKey: string): any | null {
+export function getCachedResponse(cacheKey: string): unknown | null {
   const entry = cache[cacheKey];
   
   // Check if entry exists and is not expired
@@ -37,7 +42,7 @@ export function getCachedResponse(cacheKey: string): any | null {
 }
 
 // Store a response in the cache
-export function setCachedResponse(cacheKey: string, data: any): void {
+export function setCachedResponse(cacheKey: string, data: unknown): void {
   cache[cacheKey] = {
     data,
     timestamp: Date.now()

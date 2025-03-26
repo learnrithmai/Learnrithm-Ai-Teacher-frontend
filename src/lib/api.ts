@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ChatMessage, OpenAIRequestBody } from '@/types/openai';
+import { ChatMessage } from '@/types/openai';
 import openai, { handleOpenAIError } from '@/lib/openai';
 import { trimConversationHistory, selectAppropriateModel } from '@/lib/tokenManagement';
 import { 
@@ -9,7 +9,7 @@ import {
 } from '@/lib/cache';
 
 // Validate chat request
-export function validateChatRequest(body: any): { isValid: boolean; errorMessage?: string } {
+export function validateChatRequest(body: { messages?: ChatMessage[] }): { isValid: boolean; errorMessage?: string } {
   if (!body) {
     return { isValid: false, errorMessage: 'Request body is required' };
   }
@@ -110,7 +110,12 @@ export async function processChatRequest(
 
     return NextResponse.json(responseData);
   } catch (error) {
-    const formattedError = handleOpenAIError(error);
+    const formattedError = handleOpenAIError(error as { 
+      response?: { status: number; data?: { error?: { message?: string } } }; 
+      request?: unknown; 
+      cause?: { code?: string }; 
+      message?: string; 
+    });
     return NextResponse.json(
       { error: formattedError.message },
       { status: formattedError.status }

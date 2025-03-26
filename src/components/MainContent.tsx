@@ -74,7 +74,8 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
           if (savedTopics) {
             const topics = JSON.parse(savedTopics)
             const topicContent = topics.find(
-              (t: any) => t.mainTopic === selectedSubject && t.name === selectedTopic
+              (t: { mainTopic: string; name: string; content: TopicContent }) => 
+                t.mainTopic === selectedSubject && t.name === selectedTopic
             )
             
             if (topicContent) {

@@ -9,7 +9,7 @@ const openai = new OpenAI({
 export default openai;
 
 // Helper function to handle OpenAI API errors
-export function handleOpenAIError(error: any): { message: string; status: number } {
+export function handleOpenAIError(error: { response?: { status: number; data?: { error?: { message?: string } } }; request?: unknown; cause?: { code?: string }; message?: string }): { message: string; status: number } {
   console.error('OpenAI API Error:', error);
   
   // Check for specific error types

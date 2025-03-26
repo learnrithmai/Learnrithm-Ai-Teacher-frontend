@@ -34,7 +34,7 @@ const logger: Logger = {
   warning: (title, msg) =>
     console.log(
       (msg ? chalk.bgYellowBright(title) + " " : "") +
-        chalk.keyword("orange")(msg || title),
+        chalk.hex("#FFA500")(msg || title),
     ),
   success: (title, msg) =>
     console.log(
