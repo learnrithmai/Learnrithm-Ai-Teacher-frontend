@@ -2,7 +2,7 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { ENV } from "@/types/envSchema";
 import logger from "@/utils/chalkLogger";
 import { SERVER_API_URL } from "./consts";
@@ -139,7 +139,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Missing email or password.");
         }
         const isSignup = credentials.isSignup === "true";
-        let response = null;
+        let response: AxiosResponse<AuthApiResponse, any> | null = null;
 
         try {
           if (isSignup) {
