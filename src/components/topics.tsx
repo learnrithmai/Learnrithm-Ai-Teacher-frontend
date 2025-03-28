@@ -243,7 +243,7 @@ export default function SubjectsTopicsPage() {
                 educationLevel: educationLevel,
                 subject: subject,
                 relatedSubtopics: subtopicsListRef.current,
-                difficulty: difficulty,
+                difficulty,
                 language: "English",
                 selectedLevel: difficulty
               }),

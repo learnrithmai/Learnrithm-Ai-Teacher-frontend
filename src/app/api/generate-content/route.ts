@@ -9,7 +9,7 @@ const openai = new OpenAI({
 });
 
 // Define the model to use
-const MODEL = "gpt-4o"; // Using more capable model for extended content
+const MODEL = "gpt-4o-mini"; // Using GPT-4o mini model
 
 // =====================
 // Configuration
@@ -42,6 +42,7 @@ interface LogParams {
   generationTime: number;
   userId: string;
   tokens?: LogTokens;
+  contentType?: string;
 }
 
 async function logToKeywordsAI({
@@ -51,6 +52,7 @@ async function logToKeywordsAI({
   generationTime,
   userId,
   tokens,
+  contentType,
 }: LogParams) {
   try {
     const res = await fetch('https://api.keywordsai.co/api/request-logs/create/', {
@@ -69,7 +71,8 @@ async function logToKeywordsAI({
         completion_tokens: tokens?.completion || 0,
         total_tokens: tokens?.total || 0,
         application: 'learnrithm-ai-teacher',
-        environment: CONFIG.environment
+        environment: CONFIG.environment,
+        content_type: contentType
       }),
       // @ts-expect-error - Node.js specific option for server-side only
       agent: typeof window === 'undefined' ? httpsAgent : undefined,
@@ -135,11 +138,12 @@ export async function POST(req: NextRequest) {
       // Log the error to Keywords AI
       const generationTime = (Date.now() - startTime) / 1000;
       await logToKeywordsAI({
-        model: `error-${CONFIG.model}`,
+        model: MODEL,
         promptMessages: [{ role: 'user', content: `Generate ${contentType} for ${mainTopic} - ${subtopicTitle}` }],
         completionMessage: { role: 'assistant', content: `Error: ${error instanceof Error ? error.message : String(error)}` },
         generationTime,
         userId,
+        contentType: 'error'
       });
       
       return NextResponse.json(
@@ -155,11 +159,12 @@ export async function POST(req: NextRequest) {
     try {
       const userId = req.headers.get('x-user-id') || 'anonymous';
       await logToKeywordsAI({
-        model: `error-${CONFIG.model}`,
+        model: MODEL,
         promptMessages: [],
         completionMessage: { role: 'assistant', content: `Error: ${error instanceof Error ? error.message : String(error)}` },
         generationTime,
         userId,
+        contentType: 'api-error'
       });
     } catch (logError) {
       console.error('Failed to log error to Keywords AI:', logError);
@@ -187,10 +192,21 @@ async function generateVideoTextContent(
     const promptMessages = [
       {
         role: "system" as const,
-        content: `You are an expert educational content creator specializing in ${mainTopic}, particularly on topics related to ${subtopicTitle}. 
-        Create accurate, comprehensive, and pedagogically sound content that is directly relevant to the requested topic.
-        Ensure your content is factually correct and appropriate for ${educationLevel} education at ${selectedLevel} difficulty level.
-        Your response should be extensive, detailed, and thorough enough to fill approximately 2 pages of A4 paper when printed.`
+        content: `You are an exceptional ${educationLevel} teacher creating student materials for ${mainTopic}. 
+
+Write exactly as if speaking directly to your students in a real classroom setting. Your content should feel like actual student notes or textbook material, not like a lesson plan with instructional labels.
+
+Your teaching strengths:
+1. You make complex concepts feel simple and approachable
+2. You use natural, engaging language that connects with students
+3. You seamlessly integrate examples, explanations, and practice
+4. You anticipate confusion points and address them naturally
+5. You create a supportive, encouraging learning environment
+6. You make abstract ideas concrete through relatable examples
+7. You build content that flows logically from one concept to the next
+8. You never reveal the instructional structure behind your teaching
+
+Create content that a ${educationLevel} student would actually see in their coursework at ${selectedLevel} difficulty, with all teaching elements woven naturally into the material.`
       },
       {
         role: "user" as const,
@@ -202,13 +218,21 @@ async function generateVideoTextContent(
       model: MODEL,
       messages: promptMessages,
       temperature: 0.7,
-      max_tokens: 4000 // Increased token limit for longer content
+      max_tokens: 4000 // Adjusted token limit for GPT-4o mini
     });
 
     // Generate a YouTube search query
-    const videoQueryPrompt = `Create a precise YouTube search query for a high-quality educational video about "${subtopicTitle}" 
-    in the context of ${mainTopic} for ${educationLevel} level students (${selectedLevel} difficulty) in ${language}.
-    Return ONLY the search query text without any formatting or extra text.`;
+    const videoQueryPrompt = `As an experienced ${educationLevel} educator teaching ${mainTopic}, you need to find the perfect educational video on "${subtopicTitle}" for your ${selectedLevel} level class that speaks ${language}.
+
+Create a YouTube search query that will find a video that:
+1. Directly addresses the specific topic
+2. Is appropriate for ${educationLevel} students
+3. Matches the ${selectedLevel} difficulty level
+4. Is in ${language}
+5. Has high pedagogical value
+6. Is likely to be from a reputable educational source
+
+Return ONLY the search query text without any additional text or formatting.`
 
     const videoQueryMessages = [
       {
@@ -235,7 +259,7 @@ async function generateVideoTextContent(
     // Log to Keywords AI
     const generationTime = (Date.now() - startTime) / 1000;
     await logToKeywordsAI({
-      model: `${MODEL}-video-theory`,
+      model: MODEL,
       promptMessages: promptMessages,
       completionMessage: { role: 'assistant', content: theoryResponse.choices[0].message.content },
       generationTime,
@@ -244,12 +268,13 @@ async function generateVideoTextContent(
         prompt: theoryResponse.usage?.prompt_tokens,
         completion: theoryResponse.usage?.completion_tokens,
         total: theoryResponse.usage?.total_tokens
-      }
+      },
+      contentType: 'video-theory'
     });
 
     // Log video query to Keywords AI
     await logToKeywordsAI({
-      model: `${MODEL}-video-query`,
+      model: MODEL,
       promptMessages: videoQueryMessages,
       completionMessage: { role: 'assistant', content: videoQueryResponse.choices[0].message.content },
       generationTime: generationTime / 2, // Approximate time for this part
@@ -258,7 +283,8 @@ async function generateVideoTextContent(
         prompt: videoQueryResponse.usage?.prompt_tokens,
         completion: videoQueryResponse.usage?.completion_tokens,
         total: videoQueryResponse.usage?.total_tokens
-      }
+      },
+      contentType: 'video-query'
     });
 
     return {
@@ -286,7 +312,21 @@ async function generatePDFContent(
     const promptMessages = [
       {
         role: "system" as const,
-        content: "You are an expert in creating educational content for PDFs. Your content should be well-structured, accurate, and optimized for PDF reading. Use markdown formatting. Create comprehensive content that would fill at least 2 pages of A4 paper when printed."
+        content: `You are creating authentic ${educationLevel} study materials for ${mainTopic} that will be used directly by students.
+
+Your content should read exactly like a well-crafted textbook or comprehensive student notes - not like a teacher's lesson plan. Never use instructional design labels as headings (like "Objectives:" or "Assessment:"). Instead, use natural content-focused headings.
+
+Your content creation strengths:
+1. You organize information in a clear, logical flow that builds understanding
+2. You explain concepts in student-friendly language at ${selectedLevel} difficulty
+3. You present material as if speaking directly to the student
+4. You use examples, analogies and visual descriptions that make learning accessible
+5. You anticipate and address confusion points naturally within explanations
+6. You integrate practice opportunities that reinforce understanding
+7. You create materials that could stand alone as complete learning resources
+8. You keep the teaching structure invisible - students see only the content
+
+Write as if this will be printed and handed directly to a ${educationLevel} student studying ${subtopicTitle} - they should see only well-organized content, not the educational framework behind it.`
       },
       {
         role: "user" as const,
@@ -298,7 +338,7 @@ async function generatePDFContent(
       model: MODEL,
       messages: promptMessages,
       temperature: 0.7,
-      max_tokens: 4500 // Increased token limit for longer content
+      max_tokens: 4000 // Adjusted token limit for GPT-4o mini
     });
 
     if (!theoryResponse.choices[0].message.content) {
@@ -308,7 +348,7 @@ async function generatePDFContent(
     // Log to Keywords AI
     const generationTime = (Date.now() - startTime) / 1000;
     await logToKeywordsAI({
-      model: `${MODEL}-pdf`,
+      model: MODEL,
       promptMessages: promptMessages,
       completionMessage: { role: 'assistant', content: theoryResponse.choices[0].message.content },
       generationTime,
@@ -317,7 +357,8 @@ async function generatePDFContent(
         prompt: theoryResponse.usage?.prompt_tokens,
         completion: theoryResponse.usage?.completion_tokens,
         total: theoryResponse.usage?.total_tokens
-      }
+      },
+      contentType: 'pdf'
     });
 
     return {
@@ -345,7 +386,21 @@ async function generateTextContent(
     const theoryMessages = [
       {
         role: "system" as const,
-        content: "You are an expert educator specializing in creating engaging, accurate educational content. Format your response using markdown for clarity. Your content should be extensive and thorough, approximately 2 pages of A4 paper when printed."
+        content: `You are writing authentic ${educationLevel} student materials for learning ${subtopicTitle} within ${mainTopic} at ${selectedLevel} difficulty level.
+
+Create content that reads exactly like polished study notes or textbook material - not like a teacher's lesson plan. Never use instructional design labels in headings (like "Hook:" or "Objective:"). Use natural, topic-relevant headings instead.
+
+Your content creation approach:
+1. You write as if directly addressing the student in a warm, encouraging voice
+2. You explain concepts clearly with language appropriate for ${selectedLevel} difficulty
+3. You seamlessly integrate examples, explanations, practice, and feedback
+4. You address potential confusion naturally within your explanations
+5. You make connections to students' existing knowledge and interests
+6. You break complex ideas into manageable parts without obvious scaffolding
+7. You include practice opportunities that feel like natural extensions of learning
+8. You keep all teaching structures invisible - students see only engaging content
+
+This should read exactly like material a student would find in their course materials or comprehensive notes, with the pedagogical framework completely hidden behind natural content flow.`
       },
       {
         role: "user" as const,
@@ -357,7 +412,7 @@ async function generateTextContent(
       model: MODEL,
       messages: theoryMessages,
       temperature: 0.7,
-      max_tokens: 4000 // Increased token limit for longer content
+      max_tokens: 4000 // Adjusted token limit for GPT-4o mini
     });
 
     if (!theoryResponse.choices[0].message.content) {
@@ -367,7 +422,7 @@ async function generateTextContent(
     // Log theory content to Keywords AI
     const generationTime = (Date.now() - startTime) / 1000;
     await logToKeywordsAI({
-      model: `${MODEL}-text`,
+      model: MODEL,
       promptMessages: theoryMessages,
       completionMessage: { role: 'assistant', content: theoryResponse.choices[0].message.content },
       generationTime,
@@ -376,7 +431,8 @@ async function generateTextContent(
         prompt: theoryResponse.usage?.prompt_tokens,
         completion: theoryResponse.usage?.completion_tokens,
         total: theoryResponse.usage?.total_tokens
-      }
+      },
+      contentType: 'text'
     });
 
     return {
@@ -396,28 +452,98 @@ function constructTheoryPrompt(
   educationLevel: string,
   selectedLevel: string
 ): string {
-  return `Create extensive, comprehensive educational content about the subtopic "${subtopicTitle}" 
-  within the main topic "${mainTopic}" for ${educationLevel} level students (${selectedLevel} difficulty).
+  // Adapt difficulty level description based on the selected level
+  let difficultyDescription = "";
+  if (selectedLevel === "easy") {
+    difficultyDescription = "using foundational concepts, accessible language, and straightforward examples";
+  } else if (selectedLevel === "medium") {
+    difficultyDescription = "building on basic knowledge with moderate complexity and some challenging concepts";
+  } else if (selectedLevel === "hard") {
+    difficultyDescription = "exploring advanced concepts, sophisticated relationships, and rigorous analysis";
+  }
   
-  Your content must be thorough enough to fill approximately 2 pages of A4 paper and include:
-  1. A detailed introduction to the concept with historical context if relevant
-  2. In-depth explanations with multiple examples and counter-examples
-  3. Key principles, theories, or relationships with thorough analysis
-  4. Multiple practical applications and real-world relevance
-  5. Common misconceptions and how to address them
-  6. Advanced concepts for students who want to go deeper
-  7. A comprehensive summary of all key points
-  
-  Requirements:
-  - Content must be in ${language}
-  - Use appropriate complexity for ${educationLevel} level
-  - Format using markdown with clear headings (##) and sections
-  - Include code examples if relevant
-  - Add bullet points or numbered lists for better readability
-  - Include at least 5-7 practice questions or exercises with solutions
-  - Use tables to organize information when appropriate
-  - For mathematical expressions, use LaTeX syntax enclosed in dollar signs ($) for inline math and double dollar signs ($$) for display math
-  - Include diagrams descriptions where visual elements would be helpful`;
+  // Adapt education level specific instructions
+  let educationLevelInstructions = "";
+  if (educationLevel === "kg12") {
+    educationLevelInstructions = `
+- Use simple, concrete language with relatable examples
+- Include frequent engagement through questions and activities
+- Break concepts into very small, manageable pieces
+- Use storytelling and characters to maintain interest
+- Provide plenty of visual thinking prompts
+- Reinforce concepts through repetition and varied approaches
+- Keep explanations brief with immediate application`;
+  } else if (educationLevel === "highSchool") {
+    educationLevelInstructions = `
+- Balance conceptual understanding with practical applications
+- Connect content to teenagers' interests and experiences
+- Include real-world examples that demonstrate relevance
+- Provide more challenging analytical questions
+- Include short projects or exploratory activities
+- Address potential career connections to the topic
+- Use engaging, age-appropriate language and examples`;
+  } else if (educationLevel === "university") {
+    educationLevelInstructions = `
+- Provide more theoretical depth and scholarly context
+- Include references to key research and relevant literature
+- Encourage critical analysis and independent thinking
+- Present competing perspectives or interpretations
+- Connect to broader academic discourse in the field
+- Include more sophisticated problem-solving approaches
+- Reference scholarly terminology with clear explanations`;
+  } else if (educationLevel === "skill") {
+    educationLevelInstructions = `
+- Focus heavily on practical application and hands-on learning
+- Break skills into clear, sequential steps with specific instructions
+- Include troubleshooting guidance for common challenges
+- Emphasize real-world application scenarios
+- Provide clear criteria for successful skill performance
+- Include practice exercises with increasing independence
+- Connect skills to workplace or practical contexts`;
+  }
+
+  return `Create engaging, student-centered lesson content on "${subtopicTitle}" within "${mainTopic}" for ${educationLevel} students in ${language}, at ${selectedLevel} difficulty level.
+
+IMPORTANT: Write this exactly as it would appear in a real student's notes or textbook. DO NOT use instructional design labels like "Hook:" or "Objective:" in your headings. Instead, use natural, topic-relevant headings that a student would actually see.
+
+Create content that flows naturally as if a skilled teacher is speaking directly to students. The material should:
+
+1. Start with an interesting real-world scenario, question, or fascinating fact about ${subtopicTitle} that naturally draws students in without explicitly labeling it as a "hook"
+
+2. Include clear learning goals phrased conversationally ("By the end of this lesson, you'll be able to...")
+
+3. Connect to students' existing knowledge with relatable examples specific to ${educationLevel} level
+
+4. Present core concepts in a structured, logical flow with:
+   - Clear explanations using accessible language appropriate for ${selectedLevel} difficulty
+   - Visual descriptions and analogies that make abstract concepts concrete
+   - Examples AND counter-examples that clarify understanding
+   - Addressing of potential misunderstandings naturally within the content
+   - Gradual progression from simpler to more complex ideas
+
+5. Integrate practice throughout with:
+   - Guided examples with step-by-step thinking revealed
+   - "Try This" activities with increasing independence
+   - Real-world applications showing why this matters
+   - Questions that promote deeper thinking
+   - Clear solutions and explanations
+
+6. Close with:
+   - A summary of key points
+   - Connections to other topics in ${mainTopic}
+   - Next steps for further exploration
+   - Quick review questions for self-assessment
+
+Specific requirements:
+${educationLevelInstructions}
+- Write in a warm, encouraging voice as if speaking directly to the student
+- Use second-person "you" language to create a personal connection
+- Include appropriate academic terminology with clear, friendly explanations
+- Format using markdown with topic-based headings (not instructional labels)
+- For mathematical content, use LaTeX notation within $ symbols
+- Incorporate culturally diverse examples and applications
+
+Remember: This should read like authentic learning content a student would actually use - not like a teacher's lesson plan. The instructional design should be invisible to the student, with all teaching elements integrated naturally into the content.`;
 }
 
 function constructPDFPrompt(
@@ -427,27 +553,99 @@ function constructPDFPrompt(
   educationLevel: string,
   selectedLevel: string
 ): string {
-  return `Create extensive, comprehensive educational content about the subtopic "${subtopicTitle}" 
-  within the main topic "${mainTopic}" for ${educationLevel} level students (${selectedLevel} difficulty).
+  // Adapt difficulty level description based on the selected level
+  let difficultyDescription = "";
+  if (selectedLevel === "easy") {
+    difficultyDescription = "using foundational concepts, accessible language, and straightforward examples";
+  } else if (selectedLevel === "medium") {
+    difficultyDescription = "building on basic knowledge with moderate complexity and some challenging concepts";
+  } else if (selectedLevel === "hard") {
+    difficultyDescription = "exploring advanced concepts, sophisticated relationships, and rigorous analysis";
+  }
   
-  Structure the content for PDF format with enough material to fill at least 2 full A4 pages:
-  1. Title, Introduction, and Historical Context
-  2. Detailed Learning Objectives
-  3. Main Content (with multiple clear sections and subsections)
-  4. Multiple Examples, Case Studies, and Illustrations
-  5. Common Misconceptions and Clarifications
-  6. At least 5-7 Practice Exercises with Detailed Solutions
-  7. Comprehensive Summary
-  8. Glossary of Key Terms
-  9. Additional Resources and Further Reading
-  
-  Requirements:
-  - Content must be in ${language}
-  - Use appropriate complexity for ${educationLevel} level
-  - Format using markdown with clear headings (##) and sections
-  - Include tables for organizing information
-  - Add diagrams descriptions where visual information would be helpful
-  - Include key terms and detailed definitions
-  - End with suggestions for further reading and exploration
-  - For mathematical expressions, use LaTeX syntax enclosed in dollar signs ($) for inline math and double dollar signs ($$) for display math`;
+  // Adapt education level specific instructions
+  let educationLevelInstructions = "";
+  if (educationLevel === "kg12") {
+    educationLevelInstructions = `
+- Use simple, concrete language with many visual thinking prompts
+- Break concepts into very small, manageable pieces
+- Include frequent activities and engagement opportunities
+- Use storytelling elements to maintain interest
+- Include more visual organizers and less text-dense sections
+- Provide plenty of examples with colorful descriptions
+- Keep explanations brief with immediate application`;
+  } else if (educationLevel === "highSchool") {
+    educationLevelInstructions = `
+- Balance conceptual understanding with practical exercises
+- Connect content to teenagers' experiences and interests
+- Include culturally diverse, real-world examples
+- Provide scaffolded note-taking sections
+- Include critical thinking prompts throughout
+- Address potential career connections to the topic
+- Use engaging, age-appropriate language and examples`;
+  } else if (educationLevel === "university") {
+    educationLevelInstructions = `
+- Provide more theoretical depth and scholarly context
+- Include citations and references to key research
+- Encourage critical analysis through guided questions
+- Present competing perspectives or interpretations
+- Connect to broader academic discourse in the field
+- Include more sophisticated problem-solving approaches
+- Use scholarly terminology with clear explanations`;
+  } else if (educationLevel === "skill") {
+    educationLevelInstructions = `
+- Focus primarily on practical application and sequential skill building
+- Provide clear, step-by-step procedures with visual markers
+- Include troubleshooting sections for common challenges
+- Emphasize real-world application scenarios
+- Provide assessment rubrics for skill performance
+- Include practice exercises with increasing independence
+- Connect skills to workplace or practical contexts`;
+  }
+
+  return `Create a comprehensive, student-friendly study guide on "${subtopicTitle}" within "${mainTopic}" for ${educationLevel} students in ${language}, at ${selectedLevel} difficulty level.
+
+IMPORTANT: This should be formatted exactly like high-quality student notes or a textbook chapter. DO NOT include instructional design labels in headings (like "Objectives:" or "Learning Activities:"). Instead, use natural, topic-relevant headings a student would actually see in their materials.
+
+The content should flow as if written by a knowledgeable, engaging teacher who understands how ${educationLevel} students learn best. Structure the material with:
+
+1. A compelling introduction to ${subtopicTitle} that:
+   - Presents an intriguing scenario, question, or fact that sparks curiosity
+   - Clearly outlines what students will learn (written conversationally)
+   - Shows why this topic matters in the real world
+   - Connects to prior knowledge in ${mainTopic}
+
+2. Main content presentation that:
+   - Uses clear, engaging language appropriate for ${selectedLevel} difficulty
+   - Organizes information with logical flow and natural topic-based headings
+   - Explains key concepts with multiple representations (descriptions, analogies, examples)
+   - Highlights important vocabulary within context (not as isolated lists)
+   - Includes relevant visuals described in text (tables, diagrams, flowcharts)
+   - Addresses common points of confusion within the explanations
+   - Progresses from concrete to more abstract understanding
+
+3. Practice and application opportunities that:
+   - Provide worked examples showing expert thinking processes
+   - Include "Your Turn" practice problems with solutions
+   - Connect concepts to real-world scenarios relevant to ${educationLevel} students
+   - Offer critical thinking challenges that apply knowledge in new ways
+   - Include self-check questions with answer explanations
+
+4. Synthesis and extension elements that:
+   - Summarize key points in a clear, memorable way
+   - Connect this topic to other aspects of ${mainTopic}
+   - Suggest ways to apply this knowledge beyond the classroom
+   - Provide "Going Further" resources for extended learning
+   - Include a glossary of key terms as they appear in context
+
+Specific requirements:
+${educationLevelInstructions}
+- Use a friendly, conversational tone with "you" language
+- Write as if speaking directly to the student, not about them
+- Use topic-relevant headings that reflect the subject content
+- Include helpful callout boxes for tips, notes, and important points
+- For mathematical expressions, use LaTeX notation within $ symbols
+- Incorporate diverse, inclusive examples and scenarios
+
+Remember: The final content should read like an actual page from an exceptional textbook or comprehensive student notes - not like a teacher's lesson plan or worksheet.`;
 }

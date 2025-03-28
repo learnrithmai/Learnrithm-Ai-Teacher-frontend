@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       learningMaterials,
       language = "English",
       selectedLevel = "medium",
-      paidMember = false
+      paidMember = true
     } = body;
 
     // Extract user ID from request
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
     const promptMessages = [
       {
         role: "system" as const,
-        content: "You are an educational content creator specializing in generating structured learning materials. Always provide valid JSON according to the requested format. Only respond with JSON, nothing else."
+        content: "You are an expert educational content creator specialized in curriculum development for students at all levels. Your primary responsibility is to create highly tailored educational content that perfectly balances SUBJECT MATTER, DIFFICULTY LEVEL, and EDUCATION LEVEL. Every topic you generate must:\n\n1. Be 100% focused on the requested subject with no deviation or tangential content\n2. Precisely match the specified difficulty level (easy/medium/hard) in both language and concept complexity\n3. Be perfectly calibrated for the student's education level, using appropriate terminology and examples\n4. Incorporate curriculum requirements when specified\n5. Align with cultural and regional educational contexts when country information is provided\n6. Integrate with institutional teaching approaches when school information is provided\n7. Include only subtopics that directly support learning the main subject\n\nYou must strictly follow all instructions and return only valid JSON with no additional text or comments. The generated content should be immediately useful for teachers and optimally formatted for student learning."
       },
       {
         role: "user" as const,
@@ -252,7 +252,8 @@ function constructPrompt({
   curriculum,
   language,
   selectedLevel,
-  topicCount
+  topicCount,
+  learningMaterials
 }: {
   course: string;
   subtopic: string;
@@ -265,41 +266,94 @@ function constructPrompt({
   selectedLevel: string;
   topicCount: string;
 }) {
-  // Make the prompt even more explicit about the JSON format
-  let prompt = `Generate a comprehensive and educational list of exactly ${topicCount} distinct topics for a course on ${course} at ${selectedLevel} difficulty level. `;
+  // Start with the course subject and difficulty level
+  let prompt = `Generate a comprehensive and educational list of exactly ${topicCount} distinct topics for a course on "${course}" with STRICT ADHERENCE to the following requirements:
+
+CRITICAL REQUIREMENTS:
+1. SUBJECT AREA (${course}):
+   - ALL topics MUST be 100% focused on "${course}" with no deviation
+   - Topics should cover critical aspects of ${course} that are essential for mastery
+   
+2. DIFFICULTY LEVEL (${selectedLevel}): 
+   - For "easy": Topics MUST be foundational, use simple language, cover basic concepts only, and be highly accessible.
+   - For "medium": Topics MUST build on fundamentals, introduce moderate complexity, and require some prior knowledge.
+   - For "hard": Topics MUST be advanced, cover complex theories/applications, and challenge students with sophisticated concepts.
+   
+3. EDUCATION LEVEL (${educationLevel}):`;
   
-  // Add education level context
+  // Add detailed education level context
   if (educationLevel === "highSchool") {
-    prompt += `The content should be appropriate for high school students, focusing on core concepts and applications. `;
+    prompt += `
+   - Content MUST be precisely calibrated for high school students
+   - Use appropriate terminology, examples, and depth that high school students can understand
+   - Focus on core concepts and applications with practical examples`;
   } else if (educationLevel === "kg12") {
-    prompt += `The content should be simplified for K-12 students, with emphasis on fundamental concepts and engaging examples. `;
+    prompt += `
+   - Content MUST be simplified and accessible for K-12 students
+   - Use clear, straightforward language appropriate for younger learners
+   - Emphasize fundamental concepts with engaging, relatable examples`;
   } else if (educationLevel === "university") {
-    prompt += `The content should be at university level, including advanced concepts and analytical thinking. `;
+    prompt += `
+   - Content MUST be at university level academic standard
+   - Include advanced concepts, critical analysis, and deeper theoretical foundations
+   - Encourage analytical thinking and scholarly investigation`;
   } else if (educationLevel === "skill") {
-    prompt += `The content should focus on practical skill development with clear steps and applications. `;
+    prompt += `
+   - Content MUST focus on practical skill development
+   - Include clear steps, techniques, and real-world applications
+   - Emphasize hands-on learning and measurable competency development`;
   }
 
-  // Add school-specific information if present
-  if (school && educationLevel !== "skill") {
-    prompt += `Target audience is students at ${school} in ${country}. If possible, align content with this institution's typical curriculum. `;
+  // Add school and country specific context
+  if (school && country && educationLevel !== "skill") {
+    prompt += `
+
+4. INSTITUTIONAL CONTEXT:
+   - Content MUST be aligned with the educational approach of ${school} in ${country}
+   - Consider cultural and regional educational standards and expectations
+   - Ensure topics reflect the teaching methodologies common in this institutional context`;
   }
 
-  // Add curriculum information if present
+  // Add curriculum alignment
   if (curriculum) {
-    prompt += `Content should align with ${curriculum} curriculum standards and learning objectives. `;
+    prompt += `
+
+${school && country ? '5' : '4'}. CURRICULUM ALIGNMENT:
+   - ALL content MUST align with ${curriculum} curriculum standards
+   - Follow the specific structure, sequence, and learning objectives of this curriculum
+   - Ensure coverage of required curriculum components and assessment criteria`;
   }
 
-  // Add subtopics requirement
-  prompt += `The generated topics MUST include coverage of the following subtopics: ${subtopic}. `;
+  // Add subtopics requirement with strong emphasis
+  prompt += `
+
+${(curriculum ? (school && country ? '6' : '5') : (school && country ? '5' : '4'))}. SUBTOPIC INTEGRATION:
+   - Each generated topic MUST incorporate and explicitly address these subtopics: ${subtopic}
+   - DO NOT introduce topics that fail to connect with these specified subtopics
+   - Ensure subtopics are meaningfully integrated, not superficially mentioned`;
   
   // Add language requirement
-  prompt += `All content should be in ${language}. `;
+  prompt += `
+
+${(curriculum ? (school && country ? '7' : '6') : (school && country ? '6' : '5'))}. LANGUAGE:
+   - ALL content MUST be presented in ${language}
+   - Use appropriate terminology, phrasing, and examples for ${language} speakers
+   - Ensure linguistic and cultural appropriateness`;
   
-  // Request for subtopics
-  prompt += `For each main topic, generate 2-4 relevant subtopics that break down the main concept into teachable components. `;
+  // Specify the format for subtopics
+  prompt += `
+
+For each main topic, generate 2-4 highly relevant subtopics that:
+1. Break down the main concept into clearly teachable components
+2. Maintain consistent ${selectedLevel} difficulty level
+3. Follow a logical learning progression
+4. Directly support mastery of the main topic
+5. Are appropriate for ${educationLevel} education`;
   
-  // Specify output format more explicitly
-  prompt += `You must respond ONLY with a valid JSON object in exactly the following structure without any additional text, explanations or markdown formatting:
+  // Specify output format with explicit JSON structure
+  prompt += `
+
+You must respond ONLY with a valid JSON object in exactly the following structure without any additional text, explanations or markdown formatting:
 
 {
   "${course.toLowerCase()}": [
@@ -318,7 +372,7 @@ function constructPrompt({
   ]
 }
 
-Ensure all topics and subtopics are educational, clearly explained, and appropriate for the specified education level. Leave "theory", "youtube", and "image" fields empty as these will be filled later. Do not include any text outside of the JSON structure.`;
+The JSON MUST have exactly ${topicCount} main topics. Leave "theory", "youtube", and "image" fields empty as these will be filled later.`;
   
   return prompt;
 }
