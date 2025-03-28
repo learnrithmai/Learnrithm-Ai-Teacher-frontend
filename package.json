@@ -105,6 +105,7 @@
     "@types/react-dom": "^19",
     "@types/react-dropzone": "^4.2.2",
     "@types/tesseract.js": "^2.0.0",
+    "@types/webpack": "^5.28.5",
     "buffer": "^6.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
@@ -112,6 +113,7 @@
     "process": "^0.11.10",
     "shadcn-ui": "^0.9.4",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "webpack": "^5.98.0"
   }
 }
