@@ -4,6 +4,9 @@ import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/
 import { trimConversationHistory } from '@/lib/tokenManagement';
 import { ENV } from '@/types/envSchema';
 
+// Define the model to use
+const MODEL = "gpt-4o-mini";
+
 // Add environment variable or config for Keywords AI API key
 const KEYWORDS_AI_API_KEY = ENV.KEYWORDS_API_KEY || '';
 
@@ -77,10 +80,8 @@ export async function POST(request: Request) {
       .reverse()
       .find(m => m.role === 'user')?.content || '';
       
-    // Select model based on complexity and subject
-    const model = /physics|quantum|advanced mathematics|biochemistry|theoretical|phd|thesis/i.test(lastUserMsg)
-      ? "gpt-4o"
-      : "gpt-3.5-turbo";
+    // Always use the defined model regardless of complexity
+    const model = MODEL;
 
     // Process with OpenAI
     const response = await processChatRequest(messages, {
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
     // Log error details to Keywords AI for tracking failures
     if (KEYWORDS_AI_API_KEY) {
       logToKeywordsAI({
-        model: 'unknown',
+        model: MODEL,
         promptMessages: [],
         completionMessage: { error: error instanceof Error ? error.message : 'Unknown error' },
         generationTime: (Date.now() - startTime) / 1000

@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css' // Import KaTeX CSS
 import { Card } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 
@@ -159,7 +163,12 @@ export default function MainContent({ selectedSubject, selectedTopic }: MainCont
       
       <Card className="p-6 shadow-lg">
         <div className="prose dark:prose-invert max-w-none">
-          <ReactMarkdown>{content.theory}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+          >
+            {content.theory}
+          </ReactMarkdown>
         </div>
         
         {content.imagePrompt && (

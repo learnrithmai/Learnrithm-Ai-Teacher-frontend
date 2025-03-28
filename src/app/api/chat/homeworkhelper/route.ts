@@ -3,6 +3,9 @@ import { OpenAIRequestBody } from '@/types/openai';
 import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 import { trimConversationHistory } from '@/lib/tokenManagement';
 
+// Define the model to use
+const MODEL = "gpt-4o-mini";
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as OpenAIRequestBody;
@@ -25,12 +28,8 @@ export async function POST(request: Request) {
     // Retrieve the last user message to decide on subject complexity
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
       
-    // Select model based on advanced STEM keywords in the last user message
-    const isAdvancedMath = /calculus|differential equations|linear algebra|statistics|probability|vectors/i.test(lastUserMsg);
-    const isAdvancedScience = /physics|chemistry|biochemistry|quantum|thermodynamics|organic chemistry/i.test(lastUserMsg);
-    
-    // Use a more capable model for advanced STEM topics
-    const model = (isAdvancedMath || isAdvancedScience) ? "gpt-4o" : "gpt-3.5-turbo";
+    // Always use the defined model regardless of topic complexity
+    const model = MODEL;
     
     // Process the chat request with OpenAI
     return processChatRequest(messages, {

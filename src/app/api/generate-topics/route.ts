@@ -1,11 +1,90 @@
 import { ENV } from '@/types/envSchema';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import https from 'https';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: ENV.OPENAI_API_KEY,
 });
+
+// Define the model to use
+const MODEL = "gpt-4o-mini";
+
+// =====================
+// Configuration
+// =====================
+const CONFIG = {
+  keywordsApiKey: ENV.KEYWORDS_API_KEY || '',
+  allowInsecureSSL: process.env.ALLOW_INSECURE_SSL === 'true',
+  environment: process.env.NODE_ENV || 'development',
+  model: MODEL
+};
+
+// Create a custom HTTPS agent (only on the server side)
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: !CONFIG.allowInsecureSSL,
+});
+
+// =====================
+// Logging Helpers
+// =====================
+interface LogTokens {
+  prompt?: number;
+  completion?: number;
+  total?: number;
+}
+
+interface LogParams {
+  model: string;
+  promptMessages: any[];
+  completionMessage: unknown;
+  generationTime: number;
+  userId: string;
+  tokens?: LogTokens;
+}
+
+async function logToKeywordsAI({
+  model,
+  promptMessages,
+  completionMessage,
+  generationTime,
+  userId,
+  tokens,
+}: LogParams) {
+  try {
+    const res = await fetch('https://api.keywordsai.co/api/request-logs/create/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CONFIG.keywordsApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        prompt_messages: promptMessages,
+        completion_message: completionMessage,
+        generation_time: generationTime,
+        user_id: userId,
+        prompt_tokens: tokens?.prompt || 0,
+        completion_tokens: tokens?.completion || 0,
+        total_tokens: tokens?.total || 0,
+        application: 'learnrithm-ai-teacher',
+        environment: CONFIG.environment
+      }),
+      // @ts-expect-error - Node.js specific option for server-side only
+      agent: typeof window === 'undefined' ? httpsAgent : undefined,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.text();
+      console.error(`[Keywords AI] Logging error: ${res.status} - ${errorData}`);
+    } else {
+      console.log('[Keywords AI] Successfully logged topics generation');
+    }
+  } catch (error) {
+    console.error('[Keywords AI] Logging exception:', error);
+  }
+}
 
 // Define the Topic interface
 interface Topic {
@@ -52,6 +131,7 @@ function getFallbackTopics(subject: string, difficulty: string, educationLevel: 
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     // Parse the request body
     const body = await req.json();
@@ -62,6 +142,11 @@ export async function POST(req: NextRequest) {
     const educationLevel = body.educationLevel || "university";
     const count = body.count || 5;
     const subtopics = Array.isArray(body.subtopics) ? body.subtopics : [];
+    
+    // Extract user ID from request
+    const userId = req.headers.get('x-user-id') || 
+      (body as { userId?: string }).userId || 
+      'anonymous';
     
     // Validate required fields
     if (!subject) {
@@ -94,31 +179,50 @@ Format your response EXACTLY as this JSON structure with no additional text:
   ]
 }`;
 
+    const promptMessages = [
+      {
+        role: "system" as const,
+        content: "You are an API that only returns valid JSON. You are an expert educational content creator."
+      },
+      {
+        role: "user" as const,
+        content: prompt
+      }
+    ];
+
     try {
       // Make OpenAI API request
       console.log(`Requesting topics for ${subject} (${difficulty} level)...`);
       
       const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: "You are an API that only returns valid JSON. You are an expert educational content creator."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
+        model: MODEL,
+        messages: promptMessages,
         temperature: 0.5,
       });
       
       // Get response content
       const content = completion.choices[0].message.content;
       
+      // Calculate generation time
+      const generationTime = (Date.now() - startTime) / 1000;
+      
       if (!content) {
         throw new Error("No content generated");
       }
+      
+      // Log to Keywords AI
+      await logToKeywordsAI({
+        model: `${MODEL}-topics-generation`,
+        promptMessages: promptMessages,
+        completionMessage: { role: 'assistant', content: content },
+        generationTime,
+        userId,
+        tokens: {
+          prompt: completion.usage?.prompt_tokens,
+          completion: completion.usage?.completion_tokens,
+          total: completion.usage?.total_tokens
+        }
+      });
       
       // Try to parse the response
       try {
@@ -139,6 +243,23 @@ Format your response EXACTLY as this JSON structure with no additional text:
           data: result
         });
       } catch (parseError) {
+        // Log parsing error to Keywords AI
+        await logToKeywordsAI({
+          model: `error-${MODEL}-parse`,
+          promptMessages: promptMessages,
+          completionMessage: { 
+            role: 'assistant', 
+            content: `Error parsing JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}. Raw content: ${content}` 
+          },
+          generationTime,
+          userId,
+          tokens: {
+            prompt: completion.usage?.prompt_tokens,
+            completion: completion.usage?.completion_tokens,
+            total: completion.usage?.total_tokens
+          }
+        });
+        
         // Return fallback topics if parsing fails
         console.log(`Parsing error: ${parseError instanceof Error ? parseError.message : String(parseError)}. Using fallback topics.`);
         
@@ -149,6 +270,19 @@ Format your response EXACTLY as this JSON structure with no additional text:
         });
       }
     } catch (apiError) {
+      // Log API error to Keywords AI
+      const generationTime = (Date.now() - startTime) / 1000;
+      await logToKeywordsAI({
+        model: `error-${MODEL}-api`,
+        promptMessages: promptMessages,
+        completionMessage: { 
+          role: 'assistant', 
+          content: `OpenAI API error: ${apiError instanceof Error ? apiError.message : String(apiError)}` 
+        },
+        generationTime,
+        userId,
+      });
+      
       // Handle OpenAI API errors
       console.error("OpenAI API error:", apiError);
       
@@ -160,6 +294,24 @@ Format your response EXACTLY as this JSON structure with no additional text:
       });
     }
   } catch (error) {
+    // Log general error to Keywords AI
+    const generationTime = (Date.now() - startTime) / 1000;
+    try {
+      const userId = req.headers.get('x-user-id') || 'anonymous';
+      await logToKeywordsAI({
+        model: `error-${MODEL}-general`,
+        promptMessages: [],
+        completionMessage: { 
+          role: 'assistant', 
+          content: `General error: ${error instanceof Error ? error.message : String(error)}` 
+        },
+        generationTime,
+        userId,
+      });
+    } catch (logError) {
+      console.error('Failed to log error to Keywords AI:', logError);
+    }
+    
     // Handle general errors
     console.error("General error:", error);
     

@@ -60,42 +60,52 @@ export default function Sidebar({ onTopicSelect }: SidebarProps) {
   }
 
   return (
-    <div className="w-64 h-full bg-background border-r">
-      <div className="p-4 space-y-4">
-        {Object.entries(groupedTopics).map(([mainTopic, topics]) => (
-          <div key={mainTopic} className="space-y-2">
-            <Button
-              variant="ghost"
-              className="w-full justify-between"
-              onClick={() => toggleTopic(mainTopic)}
-            >
-              <span className="flex items-center">
-                <Book className="w-4 h-4 mr-2" />
-                {mainTopic}
-              </span>
-              {expandedTopics.includes(mainTopic) ? 
-                <ChevronDown className="w-4 h-4" /> : 
-                <ChevronRight className="w-4 h-4" />
-              }
-            </Button>
-
-            {expandedTopics.includes(mainTopic) && (
-              <div className="ml-4 space-y-1">
-                {topics.map((topic) => (
-                  <Button
-                    key={topic.name}
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => onTopicSelect(mainTopic, topic.name)}
-                  >
-                    {topic.name}
-                  </Button>
-                ))}
+    <div className="w-64 h-full bg-background border-r flex flex-col overflow-y-auto">
+      <div className="p-4 border-b">
+        <h2 className="font-semibold text-lg break-words">Course Contents</h2>
+      </div>
+      <div className="flex-grow overflow-y-auto">
+        <div className="p-4 space-y-4">
+          {Object.entries(groupedTopics).map(([mainTopic, topics]) => (
+            <div key={mainTopic} className="space-y-2">
+              {/* Replace Button with div for better text wrapping control */}
+              <div 
+                className="rounded-md px-3 py-2 hover:bg-accent cursor-pointer"
+                onClick={() => toggleTopic(mainTopic)}
+              >
+                <div className="flex items-start w-full">
+                  <div className="flex-shrink-0 mt-1 mr-2">
+                    <Book className="w-4 h-4" />
+                  </div>
+                  <div className="flex-grow overflow-hidden">
+                    <p className="text-sm whitespace-normal break-words">{mainTopic}</p>
+                  </div>
+                  <div className="flex-shrink-0 ml-2 mt-1">
+                    {expandedTopics.includes(mainTopic) ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        ))}
+
+              {expandedTopics.includes(mainTopic) && (
+                <div className="ml-4 space-y-1">
+                  {topics.map((topic) => (
+                    <div
+                      key={topic.name}
+                      className="rounded-md px-3 py-1.5 hover:bg-accent cursor-pointer"
+                      onClick={() => onTopicSelect(mainTopic, topic.name)}
+                    >
+                      <p className="text-sm whitespace-normal break-words">{topic.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
