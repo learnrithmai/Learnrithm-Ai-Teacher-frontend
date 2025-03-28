@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ChatMessage, OpenAIRequestBody } from '@/types/openai';
-import { validateChatRequest, processChatRequest } from '@/lib/api';
+import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 import { trimConversationHistory } from '@/lib/tokenManagement';
 import { ENV } from '@/types/envSchema';
 
@@ -23,7 +23,6 @@ interface LogParams {
   cost?: number;
   generationTime?: number;
   ttft?: number;
-  contentType?: string; // Add content type for better tracking
 }
 
 // Helper function to log request/response to Keywords AI
@@ -44,9 +43,6 @@ async function logToKeywordsAI(params: LogParams) {
         cost: params.cost || 0,
         generation_time: params.generationTime || 0,
         ttft: params.ttft || 0,
-        application: 'learnrithm-ai-teacher',
-        environment: process.env.NODE_ENV || 'development',
-        content_type: params.contentType || 'study', // Default to 'study' if not specified
       })
     });
     
@@ -56,50 +52,6 @@ async function logToKeywordsAI(params: LogParams) {
   } catch (error) {
     console.warn('[Keywords AI] Logging error:', error);
   }
-}
-
-// Add helper function to enhance system prompts with LaTeX support
-function enhanceSystemPromptWithLatex(prompt: string): string {
-  return `${prompt}
-
-For mathematical content, use LaTeX notation within $ symbols (e.g., $x^2$ for x squared or $\\frac{1}{2}$ for fractions). Format complex mathematical expressions with double dollar signs for block mode: $$\\sum_{i=1}^n i = \\frac{n(n+1)}{2}$$`;
-}
-
-// Override addSystemPrompt to add LaTeX support
-function addSystemPromptWithLatex(messages: ChatMessage[], mode: string): ChatMessage[] {
-  // Deep copy the messages to avoid mutating the original
-  const newMessages = JSON.parse(JSON.stringify(messages));
-  
-  // Find system message if it exists
-  const systemMessageIndex = newMessages.findIndex(
-    (message: ChatMessage) => message.role === 'system'
-  );
-
-  // Get study mode system prompt
-  let systemPrompt = `You are a study guide creator that helps students prepare for exams and master subjects.
-Summarize key concepts in clear, concise language.
-Organize information in a logical, easy-to-follow structure.
-Highlight important terms, formulas, and concepts.
-Provide mnemonics, analogies, and visual descriptions to aid memory.
-Include practice questions with solutions.
-Suggest effective study strategies tailored to the subject.
-Create connections between different parts of the material.`;
-  
-  // Enhance with LaTeX instructions
-  systemPrompt = enhanceSystemPromptWithLatex(systemPrompt);
-
-  if (systemMessageIndex >= 0) {
-    // Update existing system message
-    newMessages[systemMessageIndex].content = systemPrompt;
-  } else {
-    // Add system message at the beginning
-    newMessages.unshift({
-      role: 'system',
-      content: systemPrompt,
-    });
-  }
-
-  return newMessages;
 }
 
 export async function POST(request: Request) {
@@ -120,8 +72,8 @@ export async function POST(request: Request) {
     // Trim conversation history for token management
     const trimmedMessages = trimConversationHistory(body.messages, 4000, 4);
     
-    // Add system message for study mode with LaTeX support
-    const messages = addSystemPromptWithLatex(trimmedMessages, 'study');
+    // Add system message for study mode
+    const messages = addSystemPrompt(trimmedMessages, 'study');
     
     // Get last user message to determine study subject complexity
     const lastUserMsg = [...messages]
@@ -169,8 +121,7 @@ export async function POST(request: Request) {
           email: userInfo.email || ''
         },
         cost: responseData.usage?.total_tokens || 0,
-        generationTime,
-        contentType: 'study' // Specify content type as 'study'
+        generationTime
       });
     }
 
@@ -184,8 +135,7 @@ export async function POST(request: Request) {
         model: MODEL,
         promptMessages: [],
         completionMessage: { error: error instanceof Error ? error.message : 'Unknown error' },
-        generationTime: (Date.now() - startTime) / 1000,
-        contentType: 'study-error' // Use specific content type for errors
+        generationTime: (Date.now() - startTime) / 1000
       });
     }
 

@@ -71,45 +71,23 @@ export function Message({ message, isFeedbackVisible, onToggleFeedback }: Messag
         </div>
       ) : (
         <div className="flex flex-col max-w-[90%] md:max-w-[80%]">
-          <div 
-            style={{ overflowY: "hidden" }}
-            className={`prose prose-sm dark:prose-invert ${isMobile && !isExpanded ? "max-h-[150px] relative" : ""}`}
-          >
+          {/* This is where the issue likely is - the prose class with ReactMarkdown */}
+          <article className={`${isMobile && !isExpanded ? "max-h-[150px] overflow-hidden relative" : ""}`}>
             {isMobile && !isExpanded && (
               <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent dark:from-gray-900" />
             )}
-            
-            <div className="markdown-body">
+            <div className="prose prose-sm dark:prose-invert max-w-none overflow-hidden">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
                 components={{
-                  p: ({node, ...props}) => <p className="break-words" {...props} />,
-                  pre: ({node, ...props}) => (
-                    <div className="overflow-x-auto">
-                      <pre {...props} />
-                    </div>
-                  ),
-                  table: ({node, ...props}) => (
-                    <div className="overflow-x-auto">
-                      <table {...props} />
-                    </div>
-                  ),
-                  img: ({node, ...props}) => (
-                    <img style={{ maxWidth: "100%" }} {...props} />
-                  ),
-                  code: ({node, inline, ...props}: {node?: any; inline?: boolean; [key: string]: any}) => 
-                    inline ? <code {...props} /> : (
-                      <div className="overflow-x-auto">
-                        <code {...props} />
-                      </div>
-                    )
+                  p: ({node, ...props}) => <p className="break-words" {...props} />
                 }}
               >
                 {message.content}
               </ReactMarkdown>
             </div>
-          </div>
+          </article>
           
           {/* Show expand/collapse button on mobile for long messages */}
           {isMobile && message.content.length > 300 && (

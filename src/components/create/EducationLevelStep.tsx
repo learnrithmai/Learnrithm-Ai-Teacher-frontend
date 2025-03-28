@@ -57,7 +57,7 @@ export const EducationLevelStep: React.FC<StepProps> = ({
           value={language} 
           onValueChange={(value) => {
             if (!paidMember) {
-              checkPaidMembership();
+              if (checkPaidMembership) checkPaidMembership();
               return;
             }
             if (setLanguage) setLanguage(value);
