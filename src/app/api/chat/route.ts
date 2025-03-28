@@ -4,13 +4,17 @@ import { OpenAIRequestBody, ChatMessage } from '@/types/openai';
 import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 import { ENV } from '@/types/envSchema';
 
+// Define the model to use
+const MODEL = "gpt-4o-mini";
+
 // =====================
 // Configuration
 // =====================
 const CONFIG = {
   keywordsApiKey: ENV.KEYWORDS_API_KEY || '',
   allowInsecureSSL: process.env.ALLOW_INSECURE_SSL === 'true',
-  environment: process.env.NODE_ENV || 'development'
+  environment: process.env.NODE_ENV || 'development',
+  model: MODEL // Add model to configuration
 };
 
 // Create a custom HTTPS agent (only on the server side)
@@ -85,7 +89,7 @@ async function logResponse(
 ) {
   const generationTime = (Date.now() - startTime) / 1000;
   await logToKeywordsAI({
-    model: responseData?.model || `${mode}-openai`,
+    model: responseData?.model || `${mode}-${CONFIG.model}`, // Use configured model
     promptMessages: messages,
     completionMessage: { role: 'assistant', content: responseData?.content || '' },
     generationTime,
@@ -139,8 +143,12 @@ export async function POST(request: Request) {
             headers: {
               'Content-Type': 'application/json',
               'x-user-id': userId,
+              'x-model': CONFIG.model, // Pass model in headers
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify({
+              ...body,
+              model: CONFIG.model // Set model in request body
+            }),
             // @ts-expect-error - Node.js specific option for server-side only
             agent: typeof window === 'undefined' ? httpsAgent : undefined,
           });
@@ -157,6 +165,7 @@ export async function POST(request: Request) {
           const fallbackMessages = addSystemPrompt(body.messages, mode);
           const fallbackStart = Date.now();
           const fallbackRes = await processChatRequest(fallbackMessages, {
+            model: CONFIG.model, // Use the configured model
             max_tokens: body.max_tokens || 1000,
             temperature: 0.7,
           });
@@ -173,6 +182,7 @@ export async function POST(request: Request) {
         const messages = addSystemPrompt(body.messages, 'default');
         const defaultStart = Date.now();
         const result = await processChatRequest(messages, {
+          model: CONFIG.model, // Use the configured model
           max_tokens: body.max_tokens || 1000,
           temperature: 0.7,
         });
@@ -190,7 +200,7 @@ export async function POST(request: Request) {
     try {
       const userId = request.headers.get('x-user-id') || 'anonymous';
       await logToKeywordsAI({
-        model: 'error-openai',
+        model: `error-${CONFIG.model}`, // Use configured model in error logs
         promptMessages: [],
         completionMessage: { role: 'assistant', content: `Error: ${error instanceof Error ? error.message : error}` },
         generationTime,

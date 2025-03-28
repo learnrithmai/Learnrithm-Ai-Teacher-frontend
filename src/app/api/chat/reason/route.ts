@@ -3,6 +3,9 @@ import { OpenAIRequestBody } from '@/types/openai';
 import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 import { trimConversationHistory } from '@/lib/tokenManagement';
 
+// Define the model to use
+const MODEL = "gpt-4o-mini";
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as OpenAIRequestBody;
@@ -22,8 +25,8 @@ export async function POST(request: Request) {
     // Add system message for reasoning mode
     const messages = addSystemPrompt(trimmedMessages, 'reason');
     
-    // Always use GPT-4o for reasoning tasks
-    const model = "gpt-4o";
+    // Use the defined model constant
+    const model = MODEL;
 
     // Process the request with OpenAI
     return processChatRequest(messages, {

@@ -1,5 +1,3 @@
-"use client";
-
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,7 +18,6 @@ interface Topic {
 interface TopicContent {
   theory: string;
   videoQuery?: string;
-  imagePrompt?: string;
   type: string;
 }
 
@@ -52,7 +49,7 @@ export default function SubjectsTopicsPage() {
   // Initialize on mount but don't update it on rerenders
   useEffect(() => {
     subtopicsListRef.current = subtopics.split(',').map(s => s.trim()).filter(Boolean);
-  }, [subtopics]); // Empty dependency - run once on mount
+  }, [subtopics]); 
   
   const [expandedTopics, setExpandedTopics] = useState<string[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -66,6 +63,7 @@ export default function SubjectsTopicsPage() {
   const retryCountRef = useRef(0);
   const fetchRequestSentRef = useRef(false);
   const isMountedRef = useRef(true);
+  const abortControllersRef = useRef<AbortController[]>([]);
   
   // Fetch topics only once on initial mount
   useEffect(() => {
@@ -181,8 +179,10 @@ export default function SubjectsTopicsPage() {
     // Cleanup function to prevent state updates on unmount
     return () => {
       isMountedRef.current = false;
+      // Abort any pending requests
+      abortControllersRef.current.forEach(controller => controller.abort());
     };
-  }, [difficulty, educationLevel, router, subject]); // Empty dependency array - run once on mount
+  }, [difficulty, educationLevel, router, subject]);
 
   const toggleTopic = (topicName: string) => {
     setExpandedTopics(prev =>
@@ -216,58 +216,89 @@ export default function SubjectsTopicsPage() {
     const totalTopics = selectedTopics.length;
 
     try {
-      for (let i = 0; i < selectedTopics.length; i++) {
-        const subtopic = selectedTopics[i];
-        const topic = topics.find(t => t.subtopics.includes(subtopic));
-        if (!topic) continue;
+      // Batch process to speed up generation - process up to 3 topics in parallel
+      const batchSize = 3;
+      const topicsToProcess = [...selectedTopics];
+      
+      while (topicsToProcess.length > 0) {
+        const batch = topicsToProcess.splice(0, batchSize);
+        const batchPromises = batch.map(async (subtopic) => {
+          const topic = topics.find(t => t.subtopics.includes(subtopic));
+          if (!topic) return null;
 
-        try {
-          const response = await fetch('/api/generate-content', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              mainTopic: topic.name,
-              subtopicTitle: subtopic,
-              contentType: "Text & Image Course",
-              educationLevel: educationLevel,
-              subject: subject,
-              relatedSubtopics: subtopicsListRef.current,
-              difficulty: difficulty,
-              language: "English"
-            }),
-          });
+          try {
+            // Create an abort controller for this request
+            const controller = new AbortController();
+            abortControllersRef.current.push(controller);
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = await response.json();
-          if (data.success && data.content) {
-            generatedContent.push({
-              name: subtopic,
-              mainTopic: topic.name,
-              content: data.content as TopicContent
+            const response = await fetch('/api/generate-content', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                mainTopic: topic.name,
+                subtopicTitle: subtopic,
+                contentType: "Text & Text Course", // Changed from "Text & Image Course"
+                educationLevel: educationLevel,
+                subject: subject,
+                relatedSubtopics: subtopicsListRef.current,
+                difficulty,
+                language: "English",
+                selectedLevel: difficulty
+              }),
+              signal: controller.signal
             });
 
-            // Update progress
-            const currentProgress = Math.round(((i + 1) / totalTopics) * 100);
-            setProgress(currentProgress);
+            // Remove this controller from the array
+            abortControllersRef.current = abortControllersRef.current.filter(c => c !== controller);
 
-            toast({
-              title: "Progress",
-              description: `Generated content for ${subtopic} (${currentProgress}%)`,
-            });
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success && data.content) {
+              return {
+                name: subtopic,
+                mainTopic: topic.name,
+                content: data.content as TopicContent
+              };
+            }
+          } catch (error) {
+            if (error instanceof DOMException && error.name === 'AbortError') {
+              console.log(`Request for ${subtopic} was aborted`);
+            } else {
+              console.error(`Error generating content for ${subtopic}:`, error);
+              toast({
+                title: "Warning",
+                description: `Failed to generate content for ${subtopic}. Continuing with remaining topics...`,
+                variant: "destructive",
+              });
+            }
           }
-        } catch (error) {
-          console.error(`Error generating content for ${subtopic}:`, error);
-          toast({
-            title: "Warning",
-            description: `Failed to generate content for ${subtopic}. Continuing with remaining topics...`,
-            variant: "destructive",
-          });
-        }
+          return null;
+        });
+
+        // Wait for all batch promises to complete
+        const batchResults = await Promise.all(batchPromises);
+        
+        // Add successful results to generatedContent
+        batchResults.forEach(result => {
+          if (result) {
+            generatedContent.push(result);
+          }
+        });
+
+        // Update progress
+        const processed = selectedTopics.length - topicsToProcess.length;
+        const currentProgress = Math.round((processed / totalTopics) * 100);
+        setProgress(currentProgress);
+
+        toast({
+          title: "Progress",
+          description: `Generated ${processed} of ${totalTopics} topics (${currentProgress}%)`,
+        });
       }
 
       if (generatedContent.length > 0) {
@@ -301,6 +332,9 @@ export default function SubjectsTopicsPage() {
     } finally {
       setGenerating(false);
       setProgress(0);
+      // Clean up any remaining abort controllers
+      abortControllersRef.current.forEach(controller => controller.abort());
+      abortControllersRef.current = [];
     }
   };
 

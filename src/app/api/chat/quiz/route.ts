@@ -3,6 +3,9 @@ import { OpenAIRequestBody } from '@/types/openai';
 import { validateChatRequest, addSystemPrompt, processChatRequest } from '@/lib/api';
 import { trimConversationHistory } from '@/lib/tokenManagement';
 
+// Define the model to use
+const MODEL = "gpt-4o-mini";
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as OpenAIRequestBody;
@@ -27,10 +30,8 @@ export async function POST(request: Request) {
       .reverse()
       .find(m => m.role === 'user')?.content || '';
       
-    // Select model based on complexity keywords in the last user message
-    const model = /advanced|complex|graduate|university level|difficult/i.test(lastUserMsg)
-      ? "gpt-4o"
-      : "gpt-3.5-turbo";
+    // Always use the defined model regardless of complexity
+    const model = MODEL;
 
     // Process with OpenAI
     return processChatRequest(messages, {

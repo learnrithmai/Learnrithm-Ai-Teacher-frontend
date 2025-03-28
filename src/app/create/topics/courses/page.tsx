@@ -25,9 +25,9 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
+    <div className="flex flex-col min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Top Navigation Bar */}
-      <nav className="flex items-center justify-between p-4 bg-background z-50">
+      <nav className="flex items-center justify-between p-4 bg-background z-50 w-full">
         <div className="flex items-center">
           {/* Hamburger menu for mobile */}
           <Button
@@ -49,7 +49,6 @@ export default function Home() {
             <span className="ml-2 font-semibold text-lg">Learnrithm AI</span>
           </div>
         </div>
-        {/* Optionally add more nav items here */}
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
@@ -57,13 +56,13 @@ export default function Home() {
         <div
           className={`fixed inset-y-0 left-0 transform ${
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-30 md:z-0`}
+          } md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-30 md:z-0 w-64`}
         >
           <Sidebar onSubjectSelect={handleSubjectSelect} onTopicSelect={handleTopicSelect} />
         </div>
 
         {/* Main content */}
-        <div className="flex-1 overflow-auto p-4 md:p-8">
+        <div className="flex-1 p-4 md:p-8 w-full">
           <MainContent selectedSubject={selectedSubject} selectedTopic={selectedTopic} />
         </div>
       </div>

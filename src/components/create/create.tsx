@@ -32,6 +32,7 @@ export default function CreateCoursePage() {
   // Form data state
   const [formData, setFormData] = useState<FormData>({
     course: "",
+    difficulty: "", // Initialize with default difficulty
     subtopic: "",
     educationLevel: "",
     school: "",
@@ -50,9 +51,15 @@ export default function CreateCoursePage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [paidMember, setPaidMember] = useState(false);
   const [language, setLanguage] = useState("English");
-  const [selectedLevel, setSelectedLevel] = useState("easy");
+  const [selectedLevel, setSelectedLevel] = useState("medium");
   const [skipSchool, setSkipSchool] = useState(false);
 
+  useEffect(() => {
+    if (formData.difficulty) {
+      setSelectedLevel(formData.difficulty);
+    }
+  }, [formData.difficulty]);
+ 
   // Dropdown states
   const [educationLevelDropdownOpen, setEducationLevelDropdownOpen] = useState(false);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
@@ -219,7 +226,7 @@ export default function CreateCoursePage() {
       const result = await generateCourse(
         formData, 
         language, 
-        selectedLevel, 
+        formData.difficulty, // Use formData.difficulty instead of selectedLevel
         paidMember
       ) as {
         success: boolean;
@@ -229,6 +236,7 @@ export default function CreateCoursePage() {
         type?: string;
         language?: string;
       };
+   
       
       // Check if successful (fixed the typo from 'sesuccess' to 'result.success')
       if (result.success) {
@@ -250,7 +258,7 @@ export default function CreateCoursePage() {
         }
         
         // Redirect to topics page with query parameters
-        router.push(`/create/topics?subject=${encodeURIComponent(formData.course)}&difficulty=${selectedLevel}&educationLevel=${formData.educationLevel}&subtopics=${encodeURIComponent(formData.subtopic)}`);
+        router.push(`/create/topics?subject=${encodeURIComponent(formData.course)}&difficulty=${formData.difficulty}&educationLevel=${formData.educationLevel}&subtopics=${encodeURIComponent(formData.subtopic)}`);
         
         // Don't show error toast on success or set processing to false
         // The component will unmount due to navigation
