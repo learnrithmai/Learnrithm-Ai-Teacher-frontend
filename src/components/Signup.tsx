@@ -22,7 +22,7 @@ import { useRouter } from "next/navigation";
 import GoogleButton from "./google-button";
 import { RegisterUserSchema } from "@/types/authSchema";
 import logger from "@/utils/chalkLogger";
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 
 // Extend the RegisterUserSchema with a confirmPassword field for form validation.
 type FormValues = RegisterUserSchema & {
@@ -111,9 +111,6 @@ export default function Signup() {
       toast({ title: "An error occurred during registration" });
     }
   };
-
-  const session = useSession();
-  console.log(session);
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">

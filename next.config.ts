@@ -9,13 +9,16 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  webpack: (config: any, { isServer }: WebpackConfigContext) => {
+  webpack: (config: import('webpack').Configuration, { isServer }: WebpackConfigContext) => {
     if (isServer) {
       // Mark certain packages as external to avoid bundling issues
-      config.externals = [...(config.externals || []), 'canvas', 'jsdom'];
+      config.externals = Array.isArray(config.externals) 
+        ? [...config.externals, 'canvas', 'jsdom'] 
+        : ['canvas', 'jsdom'];
     } 
     
     // Provide browser polyfills for Node.js core modules
+    config.resolve = config.resolve ?? {};
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
