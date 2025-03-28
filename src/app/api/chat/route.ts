@@ -38,6 +38,7 @@ interface LogParams {
   generationTime: number;
   userId: string;
   tokens?: LogTokens;
+  contentType?: string; // Add contentType parameter like in generate-content
 }
 
 async function logToKeywordsAI({
@@ -47,6 +48,7 @@ async function logToKeywordsAI({
   generationTime,
   userId,
   tokens,
+  contentType,
 }: LogParams) {
   try {
     const res = await fetch('https://api.keywordsai.co/api/request-logs/create/', {
@@ -65,8 +67,11 @@ async function logToKeywordsAI({
         completion_tokens: tokens?.completion || 0,
         total_tokens: tokens?.total || 0,
         application: 'learnrithm-ai-teacher',
-        environment: CONFIG.environment
-      })
+        environment: CONFIG.environment,
+        content_type: contentType || 'chat' // Default to 'chat' if not specified
+      }),
+      // @ts-expect-error - Node.js specific option for server-side only
+      agent: typeof window === 'undefined' ? httpsAgent : undefined,
     });
 
     if (!res.ok) {
@@ -98,8 +103,101 @@ async function logResponse(
       prompt: responseData?.usage?.prompt_tokens || 0,
       completion: responseData?.usage?.completion_tokens || 0,
       total: responseData?.usage?.total_tokens || 0
-    }
+    },
+    contentType: mode // Use mode as contentType
   });
+}
+
+// Add helper function to enhance system prompts with LaTeX support
+function enhanceSystemPromptWithLatex(prompt: string): string {
+  return `${prompt}
+
+For mathematical content, use LaTeX notation within $ symbols (e.g., $x^2$ for x squared or $\\frac{1}{2}$ for fractions). Format complex mathematical expressions with double dollar signs for block mode: $$\\sum_{i=1}^n i = \\frac{n(n+1)}{2}$$`;
+}
+
+// Override addSystemPrompt to add LaTeX support
+export function addSystemPromptWithLatex(messages: ChatMessage[], mode: string): ChatMessage[] {
+  // Deep copy the messages to avoid mutating the original
+  const newMessages = JSON.parse(JSON.stringify(messages));
+  
+  // Find system message if it exists
+  const systemMessageIndex = newMessages.findIndex(
+    (message: ChatMessage) => message.role === 'system'
+  );
+
+  // Get appropriate system prompt based on mode
+  let systemPrompt = getSystemPromptForMode(mode);
+  
+  // Enhance with LaTeX instructions
+  systemPrompt = enhanceSystemPromptWithLatex(systemPrompt);
+
+  if (systemMessageIndex >= 0) {
+    // Update existing system message
+    newMessages[systemMessageIndex].content = systemPrompt;
+  } else {
+    // Add system message at the beginning
+    newMessages.unshift({
+      role: 'system',
+      content: systemPrompt,
+    });
+  }
+
+  return newMessages;
+}
+
+// Helper to get system prompt for each mode
+function getSystemPromptForMode(mode: string): string {
+  switch (mode.toLowerCase()) {
+    case 'reason':
+      return `You are a helpful teaching assistant that guides students through reasoning problems step-by-step. 
+You help students think critically and understand concepts deeply without giving away answers.
+Be encouraging, ask guiding questions, and help students discover solutions themselves.
+Use the Socratic method to lead students to insights through questions.
+For complex problems, break them down into manageable steps.
+If a student seems confused, backtrack and try a different approach.
+Always acknowledge students' efforts and progress.`;
+    
+    case 'quiz':
+      return `You are a quiz assistant that helps students learn through testing their knowledge.
+Create engaging, fair questions that assess understanding of the topic.
+Provide immediate constructive feedback on answers.
+Explain why answers are correct or incorrect.
+Adjust difficulty based on student performance.
+Focus on testing conceptual understanding rather than memorization.
+Ask questions that build on previous knowledge.`;
+    
+    case 'study':
+      return `You are a study guide creator that helps students prepare for exams and master subjects.
+Summarize key concepts in clear, concise language.
+Organize information in a logical, easy-to-follow structure.
+Highlight important terms, formulas, and concepts.
+Provide mnemonics, analogies, and visual descriptions to aid memory.
+Include practice questions with solutions.
+Suggest effective study strategies tailored to the subject.
+Create connections between different parts of the material.`;
+    
+    case 'homeworkhelper':
+      return `You are a homework helper that guides students through academic assignments without solving problems for them.
+Ask questions to understand what the student already knows.
+Provide hints and scaffolding rather than complete solutions.
+Explain concepts relevant to the homework.
+Use analogies and examples to clarify difficult ideas.
+Break complex problems into manageable steps.
+Encourage the student to articulate their thinking process.
+Validate progress and suggest next steps when stuck.`;
+    
+    default:
+      return `You are an AI teaching assistant specializing in education.
+Your goal is to help students learn effectively by providing clear explanations, useful examples, and guidance appropriate to their educational level.
+Respond in a friendly, encouraging tone that builds confidence.
+When explaining concepts, use simple language first, then introduce technical terms.
+Use analogies and real-world examples to illustrate abstract ideas.
+Break down complex topics into manageable parts.
+When answering questions, check for understanding and address misconceptions.
+Adapt your responses to be age-appropriate and match the subject matter.
+Encourage critical thinking by asking follow-up questions.
+Be patient, supportive, and focus on building a positive learning experience.`;
+  }
 }
 
 // =====================
@@ -162,7 +260,8 @@ export async function POST(request: Request) {
           console.error(`Error calling ${mode} endpoint:`, fetchError);
           // Fall back to default processing for this mode
           console.log(`Falling back to default processing for ${mode} mode`);
-          const fallbackMessages = addSystemPrompt(body.messages, mode);
+          // Use the enhanced system prompt with LaTeX support
+          const fallbackMessages = addSystemPromptWithLatex(body.messages, mode);
           const fallbackStart = Date.now();
           const fallbackRes = await processChatRequest(fallbackMessages, {
             model: CONFIG.model, // Use the configured model
@@ -179,7 +278,8 @@ export async function POST(request: Request) {
       }
       default: {
         // Default chat behavior (no specific mode)
-        const messages = addSystemPrompt(body.messages, 'default');
+        // Use the enhanced system prompt with LaTeX support
+        const messages = addSystemPromptWithLatex(body.messages, 'default');
         const defaultStart = Date.now();
         const result = await processChatRequest(messages, {
           model: CONFIG.model, // Use the configured model
@@ -205,6 +305,7 @@ export async function POST(request: Request) {
         completionMessage: { role: 'assistant', content: `Error: ${error instanceof Error ? error.message : error}` },
         generationTime,
         userId,
+        contentType: 'error' // Add content type for errors
       });
     } catch (logError) {
       console.error('Failed to log error to Keywords AI:', logError);

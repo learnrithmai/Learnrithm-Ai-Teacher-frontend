@@ -6,6 +6,9 @@ import { Copy, ThumbsUp, ThumbsDown, X, Paperclip, ChevronDown, ChevronUp } from
 import { Message as MessageType } from "@/types/chat";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import 'katex/dist/katex.min.css'; // Import KaTeX CSS
 import { useState, useEffect } from "react";
 
 interface MessageProps {
@@ -68,13 +71,44 @@ export function Message({ message, isFeedbackVisible, onToggleFeedback }: Messag
         </div>
       ) : (
         <div className="flex flex-col max-w-[90%] md:max-w-[80%]">
-          <div className={`prose prose-sm dark:prose-invert ${isMobile && !isExpanded ? "max-h-[150px] overflow-hidden relative" : ""}`}>
+          <div 
+            style={{ overflowY: "hidden" }}
+            className={`prose prose-sm dark:prose-invert ${isMobile && !isExpanded ? "max-h-[150px] relative" : ""}`}
+          >
             {isMobile && !isExpanded && (
-              <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent dark:from-gray-900" />
             )}
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {message.content}
-            </ReactMarkdown>
+            
+            <div className="markdown-body">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={{
+                  p: ({node, ...props}) => <p className="break-words" {...props} />,
+                  pre: ({node, ...props}) => (
+                    <div className="overflow-x-auto">
+                      <pre {...props} />
+                    </div>
+                  ),
+                  table: ({node, ...props}) => (
+                    <div className="overflow-x-auto">
+                      <table {...props} />
+                    </div>
+                  ),
+                  img: ({node, ...props}) => (
+                    <img style={{ maxWidth: "100%" }} {...props} />
+                  ),
+                  code: ({node, inline, ...props}: {node?: any; inline?: boolean; [key: string]: any}) => 
+                    inline ? <code {...props} /> : (
+                      <div className="overflow-x-auto">
+                        <code {...props} />
+                      </div>
+                    )
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           </div>
           
           {/* Show expand/collapse button on mobile for long messages */}
@@ -101,7 +135,7 @@ export function Message({ message, isFeedbackVisible, onToggleFeedback }: Messag
             <Button 
               variant="ghost" 
               size="icon"
-              className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100"
+              className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
               onClick={() => navigator.clipboard.writeText(message.content)}
             >
               <Copy size={14} className="md:hidden" />
@@ -110,7 +144,7 @@ export function Message({ message, isFeedbackVisible, onToggleFeedback }: Messag
             <Button 
               variant="ghost" 
               size="icon"
-              className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100"
+              className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
               onClick={() => onToggleFeedback(message.id)}
             >
               <ThumbsUp size={14} className="md:hidden" />
@@ -119,27 +153,27 @@ export function Message({ message, isFeedbackVisible, onToggleFeedback }: Messag
             <Button 
               variant="ghost" 
               size="icon"
-              className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100"
+              className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ThumbsDown size={14} className="md:hidden" />
               <ThumbsDown size={16} className="hidden md:block" />
             </Button>
           </div>
           {isFeedbackVisible && (
-            <div className="flex items-center mt-2 md:mt-4 p-2 border rounded-lg border-gray-200">
-              <span className="text-xs md:text-sm text-gray-700 mr-2">Is this conversation helpful so far?</span>
-              <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100">
+            <div className="flex items-center mt-2 md:mt-4 p-2 border rounded-lg border-gray-200 dark:border-gray-700">
+              <span className="text-xs md:text-sm text-gray-700 dark:text-gray-300 mr-2">Is this conversation helpful so far?</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
                 <ThumbsUp size={14} className="md:hidden" />
                 <ThumbsUp size={16} className="hidden md:block" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100">
+              <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
                 <ThumbsDown size={14} className="md:hidden" />
                 <ThumbsDown size={16} className="hidden md:block" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100 ml-auto"
+                className="h-6 w-6 md:h-8 md:w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 ml-auto"
                 onClick={() => onToggleFeedback(message.id)}
               >
                 <X size={14} className="md:hidden" />
