@@ -15,7 +15,7 @@ interface QuizProps {
   subject: string
   topic: string
   questions: QuizQuestion[]
-  onComplete: (score: number) => void
+  onComplete: (score: number, userAnswers: UserAnswer[]) => void
 }
 
 interface UserAnswer {
@@ -76,7 +76,7 @@ export default function Quiz({ questions, onComplete }: QuizProps) {
 
   const handleCloseModal = () => {
     setShowModal(false)
-    onComplete(score)
+    onComplete(score, userAnswers) // Pass both score and user answers back
   }
 
   return (
